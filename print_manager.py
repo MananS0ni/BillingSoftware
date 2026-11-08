@@ -33,43 +33,53 @@ from settings_manager import load_settings
 _CACHED_LOGO_B64 = None
 
 def get_nh_logo_base64() -> str:
-    """Generates the official 'nh' monogram logo at crisp vector resolution encoded in base64."""
+    """Generates the official 'nh' jewelry emblem at crisp vector resolution encoded in base64."""
     global _CACHED_LOGO_B64
     if _CACHED_LOGO_B64:
         return _CACHED_LOGO_B64
     try:
-        svg_code = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
-          <rect width="100" height="100" fill="transparent"/>
-          <!-- 'n' in warm terracotta (#B86B4B) -->
-          <rect x="6" y="28" width="18" height="54" fill="#B86B4B"/>
-          <path d="M 6 42 C 6 24, 20 16, 36 16 C 50 16, 56 26, 56 38 L 56 82 L 38 82 L 38 42 C 38 34, 34 30, 26 30 C 18 30, 16 34, 16 42 Z" fill="#B86B4B"/>
+        svg_code = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="300" height="300">
+          <circle cx="60" cy="60" r="58" fill="#FCFAF6" stroke="#96101B" stroke-width="1.2"/>
+          <circle cx="60" cy="60" r="54.5" fill="none" stroke="#E7960F" stroke-width="1.5"/>
+          <circle cx="60" cy="60" r="51" fill="none" stroke="#96101B" stroke-width="0.8" stroke-dasharray="2, 2"/>
           
-          <!-- 'h' in dark bronze/charcoal (#2C2122) -->
-          <rect x="42" y="2" width="16" height="80" fill="#2C2122"/>
-          <path d="M 42 42 C 42 24, 56 16, 72 16 C 86 16, 92 26, 92 38 L 92 82 L 74 82 L 74 42 C 74 34, 70 30, 62 30 C 54 30, 50 34, 50 42 Z" fill="#2C2122"/>
-          
-          <!-- Dot grid on lower right leg of 'h' (3 columns x 4 rows) -->
-          <circle cx="79" cy="56" r="2" fill="#FFFFFF"/>
-          <circle cx="84" cy="56" r="2" fill="#FFFFFF"/>
-          <circle cx="89" cy="56" r="2" fill="#FFFFFF"/>
-          
-          <circle cx="79" cy="63" r="2" fill="#FFFFFF"/>
-          <circle cx="84" cy="63" r="2" fill="#FFFFFF"/>
-          <circle cx="89" cy="63" r="2" fill="#FFFFFF"/>
-          
-          <circle cx="79" cy="70" r="2" fill="#FFFFFF"/>
-          <circle cx="84" cy="70" r="2" fill="#FFFFFF"/>
-          <circle cx="89" cy="70" r="2" fill="#FFFFFF"/>
+          <!-- Outer decorative jewelry beads -->
+          <circle cx="112.8" cy="60.0" r="1.1" fill="#96101B"/><circle cx="105.8" cy="73.7" r="1.1" fill="#96101B"/>
+          <circle cx="97.3" cy="86.4" r="1.1" fill="#96101B"/><circle cx="86.4" cy="97.3" r="1.1" fill="#96101B"/>
+          <circle cx="73.7" cy="105.8" r="1.1" fill="#96101B"/><circle cx="60.0" cy="112.8" r="1.1" fill="#96101B"/>
+          <circle cx="46.3" cy="105.8" r="1.1" fill="#96101B"/><circle cx="33.6" cy="97.3" r="1.1" fill="#96101B"/>
+          <circle cx="22.7" cy="86.4" r="1.1" fill="#96101B"/><circle cx="14.2" cy="73.7" r="1.1" fill="#96101B"/>
+          <circle cx="7.2" cy="60.0" r="1.1" fill="#96101B"/><circle cx="14.2" cy="46.3" r="1.1" fill="#96101B"/>
+          <circle cx="22.7" cy="33.6" r="1.1" fill="#96101B"/><circle cx="33.6" cy="22.7" r="1.1" fill="#96101B"/>
+          <circle cx="46.3" cy="14.2" r="1.1" fill="#96101B"/><circle cx="60.0" cy="7.2" r="1.1" fill="#96101B"/>
+          <circle cx="73.7" cy="14.2" r="1.1" fill="#96101B"/><circle cx="86.4" cy="22.7" r="1.1" fill="#96101B"/>
+          <circle cx="97.3" cy="33.6" r="1.1" fill="#96101B"/><circle cx="105.8" cy="46.3" r="1.1" fill="#96101B"/>
 
-          <circle cx="79" cy="77" r="2" fill="#FFFFFF"/>
-          <circle cx="84" cy="77" r="2" fill="#FFFFFF"/>
-          <circle cx="89" cy="77" r="2" fill="#FFFFFF"/>
-          
-          <!-- Bottom solid terracotta underline bar -->
-          <rect x="6" y="88" width="86" height="7" fill="#B86B4B"/>
+          <!-- Inner Monogram matching authentic shop emblem -->
+          <g transform="translate(21, 23) scale(0.78)">
+            <!-- 'n' Left Stem and top tab in Warm Gold (#E7960F) -->
+            <path d="M 6 14 L 25 14 L 25 25 L 18 25 L 18 84 L 6 84 Z" fill="#E7960F"/>
+            
+            <!-- 'n' Arch and Bottom Baseline in Warm Gold (#E7960F) -->
+            <path d="M 28 14 L 37 14 C 44 14 46 16 46 24 L 46 72 L 94 72 L 94 84 L 28 84 Z" fill="#E7960F"/>
+            
+            <!-- 'h' Stepped Center in Royal Maroon (#96101B) -->
+            <path d="M 73 14 L 94 14 L 94 45 L 68 45 L 68 72 L 50 72 L 50 34 L 73 34 Z" fill="#96101B"/>
+            
+            <!-- Top-Left 12 Maroon Dots (3 columns x 4 rows) -->
+            <circle cx="53" cy="11" r="2.2" fill="#96101B"/><circle cx="59" cy="11" r="2.2" fill="#96101B"/><circle cx="65" cy="11" r="2.2" fill="#96101B"/>
+            <circle cx="53" cy="17" r="2.2" fill="#96101B"/><circle cx="59" cy="17" r="2.2" fill="#96101B"/><circle cx="65" cy="17" r="2.2" fill="#96101B"/>
+            <circle cx="53" cy="23" r="2.2" fill="#96101B"/><circle cx="59" cy="23" r="2.2" fill="#96101B"/><circle cx="65" cy="23" r="2.2" fill="#96101B"/>
+            <circle cx="53" cy="29" r="2.2" fill="#96101B"/><circle cx="59" cy="29" r="2.2" fill="#96101B"/><circle cx="65" cy="29" r="2.2" fill="#96101B"/>
+            
+            <!-- Bottom-Right 9 Maroon Dots (3 columns x 3 rows) -->
+            <circle cx="79" cy="50" r="2.2" fill="#96101B"/><circle cx="85" cy="50" r="2.2" fill="#96101B"/><circle cx="91" cy="50" r="2.2" fill="#96101B"/>
+            <circle cx="79" cy="56" r="2.2" fill="#96101B"/><circle cx="85" cy="56" r="2.2" fill="#96101B"/><circle cx="91" cy="56" r="2.2" fill="#96101B"/>
+            <circle cx="79" cy="62" r="2.2" fill="#96101B"/><circle cx="85" cy="62" r="2.2" fill="#96101B"/><circle cx="91" cy="62" r="2.2" fill="#96101B"/>
+          </g>
         </svg>"""
         renderer = QSvgRenderer(QByteArray(svg_code.encode('utf-8')))
-        img = QImage(240, 240, QImage.Format_ARGB32)
+        img = QImage(360, 360, QImage.Format_ARGB32)
         img.fill(QColor(0, 0, 0, 0))
         p = QPainter(img)
         renderer.render(p)
@@ -317,8 +327,8 @@ def generate_bill_html(bill_data: dict, shop_settings: dict = None) -> str:
 <table class="outer-table">
     <!-- 1. Top Three-Column Header (Logo | Shop Header | Page & Original For Recipient) -->
     <tr>
-        <td style="width: 18%; border-right: 1px solid #5C1D24; text-align: center; vertical-align: middle; padding: 3px;">
-            <img src="data:image/png;base64,{logo_b64}" width="46" height="46"/><br>
+        <td style="width: 18%; border-right: 1px solid #5C1D24; text-align: center; vertical-align: middle; padding: 2px;">
+            <img src="data:image/png;base64,{logo_b64}" width="52" height="52"/><br>
             <span style="font-size: 7.5pt; font-weight: bold; color: #5C1D24;">{bill_no_display}</span>
         </td>
         <td style="width: 62%; border-right: 1px solid #5C1D24; text-align: center; vertical-align: top; padding: 2px 5px;">
