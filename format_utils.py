@@ -43,31 +43,31 @@ def format_inr(val, is_paise: bool = False, symbol: str = "₹ ") -> str:
     return f"-{result}" if is_negative else result
 
 
-def num_to_words_inr(num: float) -> str:
+def num_to_words_title_case(num: float) -> str:
     """
-    Converts a numerical amount into Indian currency words in English uppercase.
+    Converts a numerical amount into Indian currency words in Title Case.
     Example:
-        58360 -> 'RUPEES : FIFTY-EIGHT THOUSAND THREE HUNDRED SIXTY ONLY'
+        58268 -> 'Rupees Fifty Eight Thousand Two Hundred and Sixty Eight Only'
     """
-    ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE',
-            'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN',
-            'SEVENTEEN', 'EIGHTEEN', 'NINETEEN']
-    tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY']
+    ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+            'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+            'Seventeen', 'Eighteen', 'Nineteen']
+    tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
     
     def two_digits(n):
         if n < 20:
             return ones[n]
         rem = n % 10
-        return (tens[n // 10] + ('-' + ones[rem] if rem else '')).strip()
+        return (tens[n // 10] + (' ' + ones[rem] if rem else '')).strip()
     
     def three_digits(n):
         h = n // 100
         rem = n % 100
         res = ''
         if h:
-            res += ones[h] + ' HUNDRED'
+            res += ones[h] + ' Hundred'
         if rem:
-            res += (' ' if res else '') + two_digits(rem)
+            res += (' and ' if res else '') + two_digits(rem)
         return res
 
     def convert_below_crore(n):
@@ -79,27 +79,27 @@ def num_to_words_inr(num: float) -> str:
         hundreds = n
         
         if lakh:
-            sub_parts.append(two_digits(lakh) + ' LAKH')
+            sub_parts.append(two_digits(lakh) + ' Lakh')
         if thousand:
-            sub_parts.append(two_digits(thousand) + ' THOUSAND')
+            sub_parts.append(two_digits(thousand) + ' Thousand')
         if hundreds:
             sub_parts.append(three_digits(hundreds))
         return ' '.join(p for p in sub_parts if p)
 
     n = int(round(num))
     if n <= 0:
-        return 'RUPEES : ZERO ONLY'
+        return 'Rupees Zero Only'
     
     parts = []
     crore = n // 10000000
     rem_crore = n % 10000000
     
     if crore:
-        parts.append(convert_below_crore(crore) + ' CRORE')
+        parts.append(convert_below_crore(crore) + ' Crore')
     if rem_crore:
         rem_str = convert_below_crore(rem_crore)
         if rem_str:
             parts.append(rem_str)
         
-    return 'RUPEES : ' + ' '.join(parts) + ' ONLY'
+    return 'Rupees ' + ' '.join(parts) + ' Only'
 
