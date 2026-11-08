@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="gu" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>સોની નટવરલાલ હિંમતલાલ – Invoice</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;600;700&family=Tinos:wght@400;700&display=swap">
+<style>
+:root{--bg:#efe9e6;--ink:#2a1a1a;--card:#fff;--line:#7a2e3a;--soft:#f6e7df;--wine:#6b2433;--muted:#6f5b5b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1517;--ink:#f1e6e6;--card:#2a1e21;--muted:#b9a6a6}}
+:root[data-theme="dark"]{--bg:#1d1517;--ink:#f1e6e6;--card:#2a1e21;--muted:#b9a6a6}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans Gujarati","Tinos",system-ui,sans-serif;font-size:14px}
+.bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;padding:12px 16px;background:var(--card);border-bottom:2px solid var(--wine)}
+.bar label{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:3px}
+.bar select,.bar input{font:inherit;padding:6px 8px;border:1px solid #b9a0a0;border-radius:4px;background:var(--card);color:var(--ink);width:110px}
+.bar button{font:inherit;font-weight:600;padding:8px 16px;border:0;border-radius:4px;background:var(--wine);color:#fff;cursor:pointer}
+.bar button.alt{background:transparent;color:var(--wine);border:1px solid var(--wine)}
+:focus-visible{outline:2px solid #c2410c;outline-offset:2px}
+.wrap{padding:18px;overflow-x:auto}
+.paper{--pw:148mm;--ph:210mm;width:var(--pw);min-height:var(--ph);margin:0 auto;background:#fffaf6;color:#2a1a1a;padding:6mm 7mm;box-shadow:0 2px 14px rgba(0,0,0,.25);position:relative;font-size:9pt}
+.paper.pre{background:#fff}
+.hd{border:1.2px solid #6b2433;margin-bottom:2mm}
+.hd.hide{opacity:.4;border-style:dashed}
+@media print{.hd.hide{visibility:hidden}}
+.hd .top{display:grid;grid-template-columns:1fr auto 1fr;padding:.6mm 2mm;font-weight:700;font-size:7.5pt;border-bottom:1px solid #6b2433}
+.hd .top span:nth-child(2){text-align:center}
+.hd .top span:nth-child(3){text-align:right}
+.hd .name{display:flex;gap:2mm;align-items:center;padding:1mm 2mm}
+.logo{height:11mm;width:auto;display:block}
+.hd h1{margin:0;font-size:11.5pt;color:#6b2433;text-align:center;line-height:1.25}
+.hd .sub{text-align:center;font-size:7pt;line-height:1.3}
+.hd .sub b{color:#b3261e}
+.meta{display:flex;gap:4mm;align-items:end;margin:1mm 0 2mm}
+.meta .f{display:flex;gap:2mm;align-items:end}
+.meta .f b{font-size:9pt}
+.meta input,.cust input,.cell{border:0;border-bottom:1px solid #9b7b7b;background:transparent;font:inherit;color:inherit;padding:1px 2px;min-width:0}
+.cust{display:flex;gap:3mm;border:1.2px solid #6b2433;padding:1.2mm 2mm;align-items:center;margin-bottom:2mm;background:#fff}
+.cust .fld{flex:1;display:flex;gap:2mm;align-items:center}
+.cust input{flex:1;font-weight:600}
+.cust small{color:#6f5b5b}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+th,td{border:1px solid #6b2433;padding:1mm 1.2mm;font-size:8.5pt;vertical-align:top}
+th{background:#f1d9cf;text-align:center;line-height:1.2;font-weight:700}
+th small{display:block;font-weight:400;font-size:6.5pt}
+td.n{text-align:right}
+.cell{width:100%;text-align:inherit}
+td.n .cell{text-align:right}
+tbody tr td{height:7mm}
+.rm{border:0;background:none;color:#b3261e;cursor:pointer;font-size:11pt;padding:0 2px}
+.tot td{font-weight:700;background:#f6e7df}
+.sum{display:flex;gap:3mm;margin-top:2mm;align-items:stretch}
+.words{flex:1;border:1px solid #6b2433;padding:1.5mm 2mm;font-size:8.5pt}
+.words b{display:block;font-size:7.5pt;color:#6f5b5b;font-weight:600}
+.calc{width:62mm;border-collapse:collapse}
+.calc td{border:1px solid #6b2433;padding:.8mm 1.5mm;font-size:8.5pt}
+.calc td:last-child{text-align:right;width:24mm}
+.calc .g td{font-weight:700;background:#f1d9cf;font-size:10pt}
+.calc input{width:100%;border:0;text-align:right;font:inherit;background:transparent;color:inherit}
+.foot{display:flex;justify-content:space-between;margin-top:5mm;font-size:8pt;align-items:end}
+.foot .sig{text-align:center;min-width:42mm;border-top:1px solid #6b2433;padding-top:1mm;font-weight:600}
+.add{margin:2mm 0 0;font:inherit;font-size:11px;background:none;border:1px dashed #6b2433;color:#6b2433;padding:3px 10px;border-radius:3px;cursor:pointer}
+@media print{
+  body{background:#fff}
+  .bar,.add,.rm,.noprint{display:none!important}
+  .wrap{padding:0;overflow:visible}
+  .paper{box-shadow:none;margin:0;background:none!important;min-height:0}
+  .paper.pre{padding-top:var(--top,0mm);padding-left:calc(7mm + var(--left,0mm))}
+  .cell,.meta input,.cust input,.calc input{border-bottom-color:transparent!important}
+  .paper.pre .cust,.paper.pre th,.paper.pre td,.paper.pre .words,.paper.pre .calc td{border-color:#6b2433}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="bar">
+  <label>Print on
+    <select id="mode"><option value="plain" selected>Plain paper (with header)</option><option value="pre">Bill book (pre-printed)</option></select>
+  </label>
+  <label>Paper
+    <select id="size"><option value="148mm 210mm">A5</option><option value="210mm 297mm">A4</option></select>
+  </label>
+  <label>Move down (mm)<input id="top" type="number" value="0" step="1"></label>
+  <label>Move right (mm)<input id="left" type="number" value="0" step="1"></label>
+  <label>Gold rate / gram<input id="grate" type="number" placeholder="13095"></label>
+  <button id="apply" class="alt" type="button">Apply rate to all</button>
+  <button id="print" type="button">Print</button>
+  <button id="reset" class="alt" type="button">New bill</button>
+</div>
+
+<div class="wrap">
+<div class="paper pre" id="paper">
+  <div class="hd hide" id="hd">
+    <div class="top"><span>વાયુ આદિતી</span><span>॥ શ્રી હરિ ॥</span><span>બ્રિજેશભાઈ ૯૮૨૫૧ ૬૨૦૬૫</span></div>
+    <div class="top" style="border-bottom:0;font-weight:600">GSTIN : 24BPXPS8279A1Z7</div>
+    <div class="name" style="border-top:1px solid #6b2433">
+      <img class="logo" alt="NH logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADmCAYAAADr2ggUAAAACXBIWXMAAA9hAAAPYQGoP6dpAAAXOElEQVR4nO3de3gU5b0H8O/v3V0CAskmXEKyi8ZLW2uhXkDq09pT7bGcx2svtPYUSxWr5oZ4a2tbbSN9zrE96qGKZJcIffByjlqO+qj1nNZLq22lWoRWBeuliCjZhEBIdrkm7O78zh8JdXeyuzMJEZzs9/M8+WNm3t+8M8o3M7t53xmAiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIhoiORwHwAdWtHglBqFuRYis6CYAME6VVnVGG99pFBdE+CvDIbrAZ0NYBqATQqsTpt9ty3s6tpZqDZSEToNFq4QYCYAKLAWBnc1dMVeHL4zK04McBGJllf/q6osBzDOvk2Ah5LxMd9ciI299m1LKkJhv4VHAJyaY7dbxJKv1u9sXZOrz+Zg6CcC3ADA2DZZCvx7Yzz24yGcCvWz/0elEWppxZGfUJW7kSO8AKDAV/1l+5pyrBe/hZXIHV4AmKpGVy2pqCi1b2guC31VgB8h978zI8CPomXhOe7PguwY4CJhrPRPAZQUbCS4vmXiUVWZq1rKw2cDOMth90cFrDFXZa5QQESw2Om4VNSxDeXHABcB7fuodJqLpiaZSs7KqrX00y77+FTm8p0VoRCAqS5Kj4xOCIfc9EEDMcBF4O6amhIAk9y09cEclbmsgqPytbXJahdQdVsHSy3XbSkbA1wE5m/e3ANgo8vmr2Ytqb6ap10WUVmfuWwweoPL/jSNHrdtyYYBLhr6axeNOq1A79qsNcY8CcByKrREf5O5XNu9KQHgeecu5XmnP0NRfgxwkUiZnhsBvFuojajUNW7fvjtzXUN366sQvbXgzkWfbIjH7rOvVp91BYABf5bK0Ovzpa8ouG8qiAEuEgu7unaqJWcBWJ1jcwLAJfWJ1odz1U7sDv4YkJ8ASOXYfB8s/zcEUPuGxh3tr1swswF5J0fdJgtmdu2O9jcGcx6UjQM5iswqwLe9rOqfYcypRjEBIuv8+/c/c/mebR1OtctKwx+xRM9UkekCfVss+VO+ARyZmidNGmeSJV9Q1VMBQEResgK9T9uv9kRERWXIV+COZWVfsNI4cTgP5lCoakzclm9bW7R0nlhSOdx9imgvVPYCuhdi9gC6V0V39vSYt46+Jh4f7v6KRTQYmmepDvv/r0PNB7xSl2h7eii1/qF2qmnMgaB2qPWHUd4Ai8pVEMwY7g4V0v+rUvCPj4oqGF2iaI+UbQGwAcAGKNb4MOo3kxt5a+mGAleJyLD//zrU0oIWAIc2wDRspvb/nA0B0tjf0xYpe8Rn5JbKuvgrw92ZAtJcVn2yMTJL0fcZeLTpWf3tzs5dTrXLx06uTPlHnQ6xpgGyybLkhcadrY5/X16FE0ZtC+46zcCaCQAWzNrJ8fEvXoi/7R+OcypmDPCHz2gB5lqWzm2PlK3s6ZVrh+s2u2XiUVXRVKrFAOcfGF8JVfRaJW2R8tAVDd2x/81V1wSYKcHwgiT0Z4COOfDJS4xqJBi6wzfGuqG2vX1vrtplwdCJnUjcY/D+xy0DC53BxCvLELq4Lh4b9l9SxYR/Rvpwmz+6RP+yrbn0uIPd0eJweEwqmfodgPNzbK6G4olo6dR/yVU7uTz0A4XeAWCMbZMAuDq9z9yrOb5PiQan1Fh9gzlyfVdyogU8Hw1OqRncmVAmBvjD7+g05Pm2pcGDGi88eo/VJILjC7VRY/1icTicFdLI+OqPiWLANEObOcvKwl8ZsD/xtyDP9MV+41TMMod9UwEMsBcIKkX0oQ2rMGrI+7DkAhetQmP2WKdkrfHJ2QACToUqmrX/5kmTxkHVaRoioPKFWysrx7o4NsqBAfYKwcyK7cHGoZSurKkZDYerb4aTHZbzOSlzwZceNR3u/n2ZsUn/dJd9kA0D7CEi+qPtv5g4frB1l2ze3AvA3RdhlmnP7lTb87S0H9zWzEW10u7qAFiW5botZWOAvaU82Zv8xmCLBFCIOg55BABj0i9l1ar5s6tONHv/dfGt7yrgODxTgY7GePt7rvqgARhgjxHg0qHUGct3I4C0w96ba7uzwzQh3vo4FAWfHqlAh5XG7bbjVIH+wMWhfT/XRAhyhwH2nlmxlvETB1tUl9iyFoIFAJJ5mjyrgd7v21deCKRVZR6At/LU7TCKuQt2xXbYN9TH2+4WRSTfMYki0hCP3ePm+Ck3Bth7xFjm80MpbOiOLUuLzBCVB9D3hI5uAM9AUdsRj52Vb3ZQ487WjT3j5CSFLFLFCwB2A3hFFJFAMvmJ+kTsdzkPFND6RKwRIucAeBxAe//P4xA5pz4Ra+TV9+BwJJYHicp0AKuGUntld+t6AHMHW3dta+s+ADf1/wxKQ3frrwG4eSIIDRKvwB6k0I8c7mOgDwcG2IsEDDABYIC9SfER1YN7msqtlZVjoxPCoVxjmAtpAszSYNVRLZjhODrLbun40ISl40MTBltH+fEzsDeN37Zi7GRgj+PfWe2iZeE5KnoTenGCQk0kGOqIQFdpIPnDQo+4aa6oniqW3A7IWYCWpoNbeyMIrzEq19YltqzNV7cK8HWWVV8LMfWAHg0AkWD4HagVnZhoW3yh45+2qBBegT1Ke0ZNHmxNNBi6XUUfQt/bBQ0ACFAJyJWSHLXe/lqVA5orqj8tltkA4CuAHngHUgmgn7XEerE5GLokV10LZgQ6g6FnIHLLgfD2H/3RELmlMxh6ZihXcnofA+xVkj5iMM0jweoLFLiqQJOadCrVYr+lvrWycqxYcm9GcO18AjQ3l4YHTHlMB9t/AOCMAn2eYQW3DvjbM7nHAHuU+ox9bq4D+Z6LRuffNaHqY5krxu4PfBnAsQ51R4jRrIkWTYAB5DtOHSrw3Sb+Oxwy/ofzKrFcX4FXAT7YZgvlk7Z8MzOXVa18rxXNPhxo1jTEyX2/CNxMvBhfPaHqo276oIEYYK9KyyBuoU/wAe7mEoulWXNzBcbVXF2FZLXzpfyu5/imU+B84CFigD3LfYD7Hx7n6gViCiv7G2XRvN8wZ7fDuszF/YmS9cg/7jqr6cRE+XrnZpQLA+xRanRQn4EV4mbSwMsdifash8z5fP7H4DyXWAHrvzJXLMTGXgD3u+jzAT6dcugYYK8a5ECObfHWOwHknHTQv78eA1yyyPb+o9rOd9tFZEHBnYvc1tDd/seB+/RdA2BLgcotvQhcXXDfVJDXArxdgNjB/BzuEzhcFgFWKj7mHChuhm3whCpe8Pmtk/M94rW+u/W/LcVZADZnb5GdAv12fXfr9bnqGhLvdfvS1ikqAydeqGCVL22dck18M99McRA8NRJLDc6pqku4+0xGAyzExl4kcMOtlZU3j9vvO0kVE8Rn1tXvaG1zmta3IBH7bRNw7KTxoeN8RqZbom/745Wv1WJdsr5AXe2u9k4AX19RGq7vlfRMAChR39rLdrZ2Dee5FStPBZiGx3c7OvYg4zWjhQKYaRFgYVfsLfxjcr/7G5r+wD7luoBc8dotNBFlYICJPIy30EXm58GaYAmSl0IwC4oJEF2nad/DjTu3vFSoTgGJlFefBzWzBTpNIZsMrNVb42332r+5truzrPJon/jmAdI/ykvXpjV935WJjneG78yKE6/ARSQaDJ8xGsn1AP4Tiq8DOAsq14uxXoyUh2/tH3I5QKTsyPJIsPphUXlcoAsAnCHQSxXyi8nB6hdyTWR4vzZ8mU/86wFZhL73Mp0PyCKf+NdHysKXfSAnWkQY4CLRXFE9VaGPKhDOsdlA9Tvbg6GFuWoFVrNAvpx7m8wUow8vwXEl9m3RYPgMiC4Hcg6VHAvR5ZFg+HODOhHKwgAXCZM2/wGgrFAbUdxsf2LG0uDUf1JRp4fJf9IX3NdgX6mqeR8pm9Eo6tiG8mKAi4XoZ53bYLQEJGv2kQ+Wyytk9v6j4yonQ/BxF31+fMm4KZPc9UF2DHARWBwOj8lz6zyQhaz5wAq4muonkOwH7QV8rh+8FwgYTiccIga4CPQ/09nd+4c0/XrWouANl928mblgUvpmvoZ26ZS47YNsGODi8ZyLNnsEgew/J4k+62bnIpq1//4hlK+6KH0112tZyB0GuEhoIHA9gIJBEcF3GxLvdWeua+xq+xOAlQX3DV1ruqta7OuNQR0Aq0CpBYPaQvumwhjgItG4ffNWGJwH4O0cm1MCvamuO7YsV22Jv/cqAPfm2ibQP/hF59Ri3YDJ+3VdsRdU9JvIPZ84LqIXNXTFCr75kArjSKwi0tAVe/HWysoTx/b4L4LoqQpMgMg6A/NYffeWDfkmNXy7s3MXgIujwfBKVZ0NwXQB3lbF6q2JtocXFbjKNna3PXDnxKm/Nynr60b7vuG2RF+y/OaXV3ZuafsgzrOYMMBFpn8m0l39P4NSH299Du4+S2fpD+rPB1tHzngLTeRhDDCRhzHARB7GABN5GANM5GH8FnqEaw6Gbjvcx/ABmnq4D+BwY4BHOAGuO9zHQB8c3kITeRgDTORhDDCRhzHARB7GABN5GANM5GEMMJGHMcBEHsYAE3kYA0zkYQwwkYcxwEQexgATeRgDTORhDDCRhzHARB7GABN5GANM5GEMMJGHMcBEHsYAE3kYA0zkYQwwkYcxwEQexge704fJ3wHsPdwHcaiJonWotQwwfWgYNXPrElvWHu7j8BLeQhN5GANM5GEMMJGHMcBEHsYAE3kYv4WmorGkoqLUpMecKiLTINamUftTay7fs63Dqa4JMJXl4Wmi1kwAUDFrO7pbNywCLKfa5WMnV+4f5Z8FNceo6gbLt++lhV1dO4fjfAAGmIqAAhIJhuaJhTsgCAIKqCAZCKSiwep/M/Gqm2uxLpmrtrk0fJwYXQnV0xXSv0NFZTD0fLMl8xt3tm7MVdeCGQEr2P7DJORGUfgBhQhgrDHx5mDoqoZ47D4B9GDPjbfQNOJFg6GrBLgHQNC2ya+Qm9LBrctz1d05cWq1GF0D4PQcm08Xo2vunDi1OldtOrh1hUJuwsCLZFCAeyLB8MJBnkZODDCNaJGyI4+B4qcOzS6OlIfOta/0pzQCoLxAXXl/myzR8tB5AL5VqEOB/jRSduQxDsfliAGmkU2scyEY7dhOMSdzsaWq6giFnudcpuctDofHFNpXHmPEpM5x0a4gBphGNIGe4rLpyZkLyT2+6QB8Lup8o3bik5kr1LavvFRmuDy2vBhgGtEsYIebdmJrZ18uJCDSaVvlqlYH1g0aA0wjmij+7KadimZNomjY2fo2gC4XpTuuSGzZlNWniLsJGZaucdWuAAaYRrSJibLHALzs0KzL5wvckblCABXRJscORJvsfw4yPt/tALodKv/qS0x51HH/DhhgGtEuxN/2i5h5grxzbneL4OLaznfb7Ru2drdFROWBvDtXvb+juy1qX13b+W67CL4FYHeuMgFaLeObl+9vz4PBANOIV9+9ZYORkmkC3AHF6+i7Yr4L1fsF6en13bEnctUtAqy6ROtFKjpXoH8AsAfAHoH+QUXn1ifavplvNFZ9d+wJQXo6VO8H8C4AheJ1Ae4wUjJtQdd7rw3HuXEkFhWF2u5NCQBXA32jpNxe/QRQdLc9AOCBVf3fSl8IpAGg0aG2Pr51M4CLBtvnYDDAVHSGGqQDwT2UfTrhLTSRhzHAVHRayo8pUxyYmeDeypqa0StrapxHddkoIC3lx5QNts4N3kJTUVgybsokn9//MwOdndbecDQY6ooAq30+63u1O9rfyFengETKwpeJaP2+eHI6AESCofWqEm1ItK4oNKOoZULV8em0uSUKfAbaWxENhlotyFPpVOr7C3dv3T4c58UrMI14S8uqT/H7fa8J9FIFwv2rKwCcn06blyNloa/lqlsF+KLB0KMiehf6hkf6+39OFtG7osHQo6vyDLeMlIW+lk6blwGc398XFAgL9FK/3/daNFjtbrilAwaYRrSVNTWjjZj7AEzK06QEIiuaK6qn2jdsL6u+BsAFBXZ/wY5g6Gr7ypbyqiMhsgJASZ66SQrctwTH5dvuGgNMI1pPYv+XAD2hcCstFTVZ83ObACMiNzjtX4Eb7Z+n0/BdCWhp4Ur5RKB875ed9u+EAaYRTVVOddkwa2ZQVWn4WAx8AEAuwZbS8HG2fc0c1mMrgAGmka7QhPxMWWFV93W52rr9xtl1H/kwwDSyia5z2fAvmUujK/yvAki5KEz1t/0HhfzVTY/2GVBDwQDTiOaD/gp9Y5gLMmr9MnN5/ubNPSp4xKlOBY/M37y5J6tPtR50cWi7/dCcY7AHgwGmEa22u/09UVxXsJFiWV2i7Wn7apNMXQlgW4HKbelkeoF9ZV2i7WkVtDj0eV1td/t7Bdu4wADTiFefiLUoZA7sYVT0ALhuYiI2IIQAUL+7Y5sanQnRJwdsFH0yZTAj34CMSd2xRgDXAei1bdqmkDkNidhdQziVATgSi4pCY7z1kZU1Nf/X05X6pCXWdCPm7aRv71+cHrLe2NW2RYGzl5ZV1vjhPxUAUki9tCDesbnQKKwLgTTiscVLKipWBKwjTrHUOtaoWT+6wv+q/Zb7YDDAVDT6g7Om/8c1ARSJjncAvHNg3ZUua/t+QXQ9B+A5AMCwvZOhD2+hiTyMASbyMN5CU9GIlFd9FmpmAzIN0E0KWb0t3vqo00vKmifVTDHJ1IWKvhFWAllrBfyrGrdv3lqorgkwk4PhLwn0M4AcA+gGiPVUQ3f7H4frnBhgGvGaJ00aJ8lRS6CY37em77sngV5bGQw922z04sauti25aiNloa8hmVym/TOK+qp1niSTTZGyUF1DIvY/OfusqJ4qltwD6JkZfX4Jam6MBEMrNbB/YeP27TkfejcYvIWmEU+SgZ8DB8I7wJliyUNNOS5mS0vDn4LgQWSEN0MFBA9GS8Oz7BuaAL9Y8hCAM/P0Od+kAovdHn8hDDCNaJGK0GmAXObQbFZleXWtfaUxugyFM2LU6IABG/37GhDsTKpyed+xHRwGmEY2xefdNBOVMzKXl44PTQBwkovSk1aUhrOv0Cr5rrz2Y3PXrgAGmEY0Vae5wP3tgOMzl8VvfdxtH0mfva0en7vlgE5dHVshDDCNaAb4u7uWsjFzadT+tMs6AMnstgKzMV/TbOq+jzwYYBrhzO/dtBLo85nLl+/Z1gHBm051qnijfneHbcKDuvwzkbtjK7iHg90B0YdZfbz1ORWscmi2IRkfs9S+Uiw0OHYgA9uMDgaaAS386hTBLxvirQwwkZOStNQD+FWezX+10pizEBvts4ZQn4j9ThR1APbmqNsrirrGeOxZ+4b5mzf3WGn5CoB8E/t/NSotzr8cXOBADhrxLtvZ2qXAF6PBqi9CzWwIpgN4W1VW+xOVdzcUeO1JfSLW0lwa/q0YzINq3zOsRF5SC/c17GzN+1l3wa7YWy2Y8alUWcclIvoZAMdCsR5iPVUfb3+s0EymwWCAqSgIoIi3PwrA9k7efG8dfV9jX1Cd3xVsU4t1SSSwHMDyzPXDcuntx1toIg9jgIk8jAEm8jAGmMjDGGAiD2OAiTyMASbyMAaYyMMYYCIPY4CJPIwBJvIwBpjIwxhgIg9jgIk8jAEm8jAGmMjDGGAiD+MTOTxKIOe1NwenOLVb80D6oB+cdqh89Mx932ifEjzvcB/HoSYmvXZK/a4nhlLLAHuWngvBuU6tZs3ddygOZrh87nAfwGFhmRYAQwowb6GJPIwBJvIwBpjIwxhgIg9jgIk8jAEm8jAGmMjDGGAiD2OAiTyMASbyMAaYyMMYYCIPY4CJPIwBJvIwBpjIwxhgIg9jgIk8jAEm8jAGmMjDGGAiD2OAiTyMASbyMAaYyMMYYCIPY4CJPIwBJvIwBpjIw4b8bqSUWot9xvfgcB6Mk0DA/+YHuX8FakVk/AfZB5Fdykq3He5jICIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIgKA/wesVmAG0U3PUgAAAABJRU5ErkJggg==">
+      <div style="flex:1">
+        <h1>સોની નટવરલાલ હિંમતલાલ</h1>
+        <div class="sub">પ્રોપરાઈટર : સોની બ્રિજેશ નટવરલાલ<br><b>સોના-ચાંદીના દાગીના બનાવનાર તથા વેચનાર.</b><br>જૈન દેરાસર પાસે, બાવળા-૩૮૨૨૨૦. જી. અમદાવાદ.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="meta">
+    <div class="f"><b>રેફ. નં.</b><input id="ref" value="1" style="width:18mm"></div>
+    <div class="f" style="margin-left:auto"><b>તા.</b><input id="date" type="date" style="width:34mm"></div>
+  </div>
+  <div class="cust">
+    <div class="fld"><b>શેઠશ્રી</b><input id="cname" placeholder="Customer name"></div>
+    <div class="fld" style="flex:.6"><small>Mobile</small><input id="cmob" placeholder="Mobile"></div>
+  </div>
+
+  <table>
+    <colgroup><col style="width:6mm"><col><col style="width:9mm"><col style="width:15mm"><col style="width:15mm"><col style="width:15mm"><col style="width:12mm"><col style="width:20mm"></colgroup>
+    <thead><tr>
+      <th>ક્રમ</th><th>વિગત<small>Description</small></th><th>પીસ<small>Pcs</small></th><th>ગ્રોસ વજન<small>Gross g</small></th><th>નેટ વજન<small>Net g</small></th><th>ભાવ<small>Rate/g</small></th><th>મજૂરી<small>Labour</small></th><th>રકમ<small>Amount ₹</small></th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+    <tfoot><tr class="tot"><td colspan="2" style="text-align:right">કુલ / Total</td><td class="n" id="tp">0</td><td class="n" id="tg">0.000</td><td class="n" id="tn">0.000</td><td></td><td class="n" id="tl">0</td><td class="n" id="tt">0.00</td></tr></tfoot>
+  </table>
+  <button class="add" id="addrow" type="button">+ Add item</button>
+
+  <div class="sum">
+    <div class="words"><b>અંકે રૂપિયા / Amount in words</b><span id="words">—</span></div>
+    <table class="calc">
+      <tr><td>કરપાત્ર રકમ</td><td id="c_tax">0.00</td></tr>
+      <tr><td>CGST <input id="gst" value="1.5" style="width:9mm;display:inline;text-align:right"> %</td><td id="c_cgst">0.00</td></tr>
+      <tr><td>SGST <span id="gst2">1.5</span> %</td><td id="c_sgst">0.00</td></tr>
+      <tr><td>Round off</td><td id="c_ro">0.00</td></tr>
+      <tr class="g"><td>કુલ રકમ / Total</td><td id="c_total">0.00</td></tr>
+      <tr><td>જમા / Received</td><td><input id="paid" type="number" value="0"></td></tr>
+      <tr><td>બાકી / Balance</td><td id="c_bal">0.00</td></tr>
+    </table>
+  </div>
+
+  <div class="foot">
+    <div>શરતો: બાવળા જ્યુરિસ્ડિક્શનને આધીન.<br><span class="noprint" style="color:#6f5b5b">Terms: Subject to Bavla jurisdiction.</span></div>
+    <div class="sig">ગ્રાહકની સહી</div>
+    <div class="sig">સોની નટવરલાલ હિંમતલાલ<br><span style="font-weight:400;font-size:7.5pt">પ્રોપરાઈટર</span></div>
+  </div>
+</div>
+</div>
+
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var rows=$('rows');
+  function fmt(n){return n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
+  function row(d){
+    d=d||{};
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td class="n sn"></td>'
+      +'<td><input class="cell" data-k="desc" placeholder="e.g. Ladies ring 916" value="'+(d.desc||'')+'"></td>'
+      +'<td class="n"><input class="cell" data-k="pcs" type="number" value="'+(d.pcs||1)+'"></td>'
+      +'<td class="n"><input class="cell" data-k="gw" type="number" step="0.001"></td>'
+      +'<td class="n"><input class="cell" data-k="nw" type="number" step="0.001"></td>'
+      +'<td class="n"><input class="cell" data-k="rate" type="number" step="0.01" value="'+($('grate').value||'')+'"></td>'
+      +'<td class="n"><input class="cell" data-k="lab" type="number" step="0.01" value="0"></td>'
+      +'<td class="n amt">0.00 <button class="rm" type="button" title="Remove row">×</button></td>';
+    rows.appendChild(tr);
+  }
+  function q(tr,k){return parseFloat(tr.querySelector('[data-k="'+k+'"]').value)||0}
+  var ones=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  var tens=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function two(n){return n<20?ones[n]:tens[Math.floor(n/10)]+(n%10?' '+ones[n%10]:'')}
+  function words(n){
+    if(!n)return 'Zero';var s='';
+    var cr=Math.floor(n/1e7);n%=1e7;var lk=Math.floor(n/1e5);n%=1e5;var th=Math.floor(n/1e3);n%=1e3;var h=Math.floor(n/100);n%=100;
+    if(cr)s+=two(cr)+' Crore ';if(lk)s+=two(lk)+' Lakh ';if(th)s+=two(th)+' Thousand ';if(h)s+=ones[h]+' Hundred ';
+    if(n)s+=(s?'and ':'')+two(n);return s.trim();
+  }
+  function calc(){
+    var trs=rows.querySelectorAll('tr'),p=0,g=0,nw=0,lab=0,tot=0;
+    trs.forEach(function(tr,i){
+      tr.querySelector('.sn').textContent=i+1;
+      var a=Math.round(q(tr,'nw')*q(tr,'rate'))+q(tr,'lab');
+      tr.querySelector('.amt').firstChild.nodeValue=fmt(a)+' ';
+      p+=q(tr,'pcs');g+=q(tr,'gw');nw+=q(tr,'nw');lab+=q(tr,'lab');tot+=a;
+    });
+    var r=parseFloat($('gst').value)||0;$('gst2').textContent=r;
+    var gs=tot*r/100,raw=tot+2*gs,total=Math.round(raw);
+    $('tp').textContent=p;$('tg').textContent=g.toFixed(3);$('tn').textContent=nw.toFixed(3);$('tl').textContent=lab;$('tt').textContent=fmt(tot);
+    $('c_tax').textContent=fmt(tot);$('c_cgst').textContent=fmt(gs);$('c_sgst').textContent=fmt(gs);
+    $('c_ro').textContent=fmt(total-raw);$('c_total').textContent=fmt(total);
+    $('c_bal').textContent=fmt(total-(parseFloat($('paid').value)||0));
+    $('words').textContent=total?'Rupees '+words(total)+' Only':'—';
+  }
+  function layout(){
+    var plain=$('mode').value==='plain',p=$('paper'),sz=$('size').value.split(' ');
+    p.classList.toggle('pre',!plain);$('hd').classList.toggle('hide',!plain);
+    p.style.setProperty('--pw',sz[0]);p.style.setProperty('--ph',sz[1]);
+    p.style.setProperty('--top',(parseFloat($('top').value)||0)+'mm');
+    p.style.setProperty('--left',(parseFloat($('left').value)||0)+'mm');
+    var st=$('pgstyle')||document.head.appendChild(Object.assign(document.createElement('style'),{id:'pgstyle'}));
+    st.textContent='@page{size:'+sz.join(' ')+';margin:'+(plain?'0':'0')+'}';
+    /* on bill book the printed header is blank space: reserve its height */
+    $('hd').style.display=plain?'block':'block';
+    if(!plain){$('hd').style.height='30mm';$('hd').style.overflow='hidden'}else{$('hd').style.height='auto';$('hd').style.overflow=''}
+  }
+  function reset(){rows.innerHTML='';row();row();
+    var d=new Date();$('date').value=d.toISOString().slice(0,10);
+    $('cname').value='';$('cmob').value='';$('paid').value=0;
+    var n=parseInt($('ref').value)||0;$('ref').value=n+1;calc()}
+  document.addEventListener('input',calc);
+  rows.addEventListener('click',function(e){if(e.target.classList.contains('rm')){e.target.closest('tr').remove();calc()}});
+  $('addrow').onclick=function(){row();calc()};
+  $('apply').onclick=function(){rows.querySelectorAll('[data-k="rate"]').forEach(function(i){i.value=$('grate').value});calc()};
+  ['mode','size','top','left'].forEach(function(i){$(i).addEventListener('input',layout)});
+  $('print').onclick=function(){layout();window.print()};
+  $('reset').onclick=reset;
+  var d=new Date();$('date').value=d.toISOString().slice(0,10);
+  row();row();layout();calc();
+})();
+</script>
+</body>
+</html>

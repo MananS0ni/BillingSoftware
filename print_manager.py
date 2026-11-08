@@ -2,18 +2,19 @@
 print_manager.py - Generates printable bills and official PDF invoices.
 Replicates the exact user-designed jewelry invoice for Soni Natvarlal Himmatlal:
 
-- Top Header Box: Sacred Invocations (વાયુ આદિતી | ॥ શ્રી હરિ ॥ | બ્રિજેશભાઈ ૯૮૨૫૧ ૬૨૦૬૫), GSTIN, Vector Monogram Logo & Authentic Gujarati Calligraphy
+- Supports both A5 (standard bill book pad, 148mm x 210mm) and A4 (210mm x 297mm)
+- Header Box: Sacred Invocations (વાયુ આદિતી | ॥ શ્રી હરિ ॥ | બ્રિજેશભાઈ ૯૮૨૫૧ ૬૨૦૬૫), GSTIN, Vector Monogram Logo & Authentic Gujarati Calligraphy
 - Reference No & Date Line with elegant underlines (રેફ. નં.  તા.)
 - Framed Customer Box: શેઠશ્રી [Customer Name] & Mobile [Number]
 - 8-Column Itemized Jewelry Table:
     ક્રમ | વિગત (Description) | પીસ (Pcs) | ગ્રોસ વજન (Gross g) | નેટ વજન (Net g) | ભાવ (Rate/g) | મજૂરી (Labour) | રકમ (Amount ₹)
-    With warm terracotta/peach header background (#F1D9CF) and item description underline
-- Totals Row: કુલ / Total with exact column sums (#F6E7DF background)
+    With warm peach header background (#f1d9cf) and item description underline
+- Totals Row: કુલ / Total with exact column sums (#f6e7df background)
 - Bottom Section:
     - Left Box: અંકે રૂપિયા / Amount in words (Rupees ... Only in Title Case)
     - Right Box: Calculation Table (કરપાત્ર રકમ, CGST 1.5%, SGST 1.5%, Round off, કુલ રકમ / Total, જમા / Received, બાકી / Balance)
-- Footer: Terms (શરતો: બાવળા જ્યુરિસ્ટિક્શનને આધીન.) & Dual Signatures (ગ્રાહકની સહી & સોની નટવરલાલ હિંમતલાલ પ્રોપ્રાઇટર)
-- Formatted to fit on exactly 1 single A4 page.
+- Footer: Terms (શરતો: બાવળા જ્યુરિસ્ડિક્શનને આધીન.) & Dual Signatures (ગ્રાહકની સહી & સોની નટવરલાલ હિંમતલાલ પ્રોપરાઈટર)
+- Strict 1-page guarantee.
 """
 
 import os
@@ -75,9 +76,10 @@ def get_nh_logo_base64() -> str:
         print(f"[Logo Error] {e}")
         return ""
 
-def generate_bill_html(bill_data: dict, shop_settings: dict = None) -> str:
+def generate_bill_html(bill_data: dict, shop_settings: dict = None, is_a5: bool = True) -> str:
     """
     Generates HTML exactly matching the user-designed perfect jewelry invoice.
+    Optimized for compact, high-precision single-page rendering.
     """
     if not shop_settings:
         st = load_settings()
@@ -125,16 +127,16 @@ def generate_bill_html(bill_data: dict, shop_settings: dict = None) -> str:
 
         items_html += f"""
         <tr>
-            <td style="text-align: center; border: 1px solid #82444E; padding: 4px 2px; font-size: 8pt;">{idx + 1}</td>
-            <td style="text-align: left; border: 1px solid #82444E; padding: 4px 6px; font-size: 8.2pt; color: #2C1810;">
-                <div style="border-bottom: 1px solid #D6C7B8; padding-bottom: 2px;">{item.get('description', '')}</div>
+            <td style="text-align: center; border: 1px solid #6b2433; padding: 2px 1px; font-size: 7.5pt;">{idx + 1}</td>
+            <td style="text-align: left; border: 1px solid #6b2433; padding: 2px 4px; font-size: 7.5pt; color: #2a1a1a;">
+                <div style="border-bottom: 1px solid #9b7b7b; padding-bottom: 1px;">{item.get('description', '')}</div>
             </td>
-            <td style="text-align: center; border: 1px solid #82444E; padding: 4px 2px; font-size: 8pt;">{pcs}</td>
-            <td style="text-align: right; border: 1px solid #82444E; padding: 4px 5px; font-size: 8pt;">{gr_wt:.3f}</td>
-            <td style="text-align: right; border: 1px solid #82444E; padding: 4px 5px; font-size: 8pt;">{net_wt:.3f}</td>
-            <td style="text-align: right; border: 1px solid #82444E; padding: 4px 5px; font-size: 8pt;">{rate_rs:,.0f}</td>
-            <td style="text-align: right; border: 1px solid #82444E; padding: 4px 5px; font-size: 8pt;">{making_rs:,.0f}</td>
-            <td style="text-align: right; border: 1px solid #82444E; padding: 4px 6px; font-size: 8pt; color: #2C1810;">{amt_rs:,.2f}</td>
+            <td style="text-align: center; border: 1px solid #6b2433; padding: 2px 1px; font-size: 7.5pt;">{pcs}</td>
+            <td style="text-align: right; border: 1px solid #6b2433; padding: 2px 3px; font-size: 7.5pt;">{gr_wt:.3f}</td>
+            <td style="text-align: right; border: 1px solid #6b2433; padding: 2px 3px; font-size: 7.5pt;">{net_wt:.3f}</td>
+            <td style="text-align: right; border: 1px solid #6b2433; padding: 2px 3px; font-size: 7.5pt;">{rate_rs:,.0f}</td>
+            <td style="text-align: right; border: 1px solid #6b2433; padding: 2px 3px; font-size: 7.5pt;">{making_rs:,.0f}</td>
+            <td style="text-align: right; border: 1px solid #6b2433; padding: 2px 4px; font-size: 7.5pt; color: #2a1a1a;">{amt_rs:,.2f}</td>
         </tr>
         """
 
@@ -157,80 +159,79 @@ def generate_bill_html(bill_data: dict, shop_settings: dict = None) -> str:
 <meta charset="utf-8">
 <style>
     body {{
-        font-family: 'Noto Sans Gujarati', 'Segoe UI', Arial, sans-serif;
+        font-family: 'Noto Sans Gujarati', 'Tinos', 'Segoe UI', Arial, sans-serif;
         margin: 0;
         padding: 0;
-        color: #2C1810;
+        color: #2a1a1a;
         background-color: #FFFFFF;
-        font-size: 8pt;
+        font-size: 7.5pt;
     }}
-    .border-table {{
+    .hd-table {{
         width: 100%;
-        border: 1.5px solid #82444E;
+        border: 1.2px solid #6b2433;
         border-collapse: collapse;
     }}
     .th-cell {{
-        background-color: #F1D9CF;
-        color: #332222;
-        border: 1px solid #82444E;
-        padding: 3px 2px;
+        background-color: #f1d9cf;
+        color: #2a1a1a;
+        border: 1px solid #6b2433;
+        padding: 1.2px 1px;
         text-align: center;
         font-weight: bold;
+        font-size: 7.2pt;
     }}
-    .totals-cell {{
-        background-color: #F6E7DF;
-        border: 1px solid #82444E;
-        padding: 3px 4px;
+    .tot-cell {{
+        background-color: #f6e7df;
+        border: 1px solid #6b2433;
+        padding: 1.2px 2px;
         font-weight: bold;
+        font-size: 7.2pt;
     }}
     .calc-row td {{
-        border: 1px solid #82444E;
-        padding: 2.5px 6px;
-        font-size: 7.8pt;
+        border: 1px solid #6b2433;
+        padding: 1px 3px;
+        font-size: 7.2pt;
     }}
 </style>
 </head>
 <body>
 
-<!-- 1. Header Box (Sacred Invocation, GSTIN, Shop Logo & Calligraphy) -->
-<table class="border-table">
-    <!-- Row 1: Sacred Invocations & Proprietor Mobile -->
+<!-- 1. Header Box -->
+<table class="hd-table">
     <tr>
-        <td style="width: 30%; padding: 2px 6px; font-weight: bold; font-size: 8.5pt; color: #2C1810;">
+        <td style="width: 32%; padding: 1px 4px; font-weight: bold; font-size: 7.5pt; color: #2a1a1a;">
             {shop_settings['header_left']}
         </td>
-        <td style="width: 40%; text-align: center; padding: 2px 6px; font-weight: bold; font-size: 9pt; color: #2C1810;">
+        <td style="width: 36%; text-align: center; padding: 1px 4px; font-weight: bold; font-size: 7.5pt; color: #2a1a1a;">
             {shop_settings['header_center']}
         </td>
-        <td style="width: 30%; text-align: right; padding: 2px 6px; font-weight: bold; font-size: 8.5pt; color: #2C1810;">
+        <td style="width: 32%; text-align: right; padding: 1px 4px; font-weight: bold; font-size: 7.5pt; color: #2a1a1a;">
             {shop_settings['header_right']}
         </td>
     </tr>
-    <!-- Row 2: GSTIN -->
     <tr>
-        <td colspan="3" style="border-top: 1px solid #82444E; border-bottom: 1px solid #82444E; padding: 2px 6px; font-weight: bold; font-size: 8pt; color: #2C1810;">
+        <td colspan="3" style="border-top: 1px solid #6b2433; border-bottom: 1px solid #6b2433; padding: 1px 4px; font-weight: 600; font-size: 7.5pt; color: #2a1a1a;">
             GSTIN : {shop_settings['gstin']}
         </td>
     </tr>
-    <!-- Row 3: Logo & Shop Details -->
     <tr>
-        <td colspan="3" style="padding: 4px 6px;">
-            <table style="width: 100%; border-collapse: collapse;">
+        <td colspan="3" style="padding: 2px 4px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
                 <tr>
-                    <td style="width: 80px; text-align: left; vertical-align: middle; padding-left: 4px;">
-                        <img src="data:image/png;base64,{logo_b64}" width="68" height="65"/>
+                    <td style="width: 48px; text-align: left; vertical-align: middle; padding-left: 2px;">
+                        <img src="data:image/png;base64,{logo_b64}" width="36" height="34"/>
                     </td>
-                    <td style="text-align: center; vertical-align: middle; padding-right: 40px;">
-                        <div style="font-size: 17pt; font-weight: bold; color: #6B2433; letter-spacing: 0.5px; line-height: 1.1;">
+                    <td style="text-align: center; vertical-align: middle; padding-right: 28px;">
+                        <div style="font-size: 11.5pt; font-weight: bold; color: #6b2433; line-height: 1.1;">
                             {shop_settings['shop_name_gu']}
                         </div>
-                        <div style="font-size: 7.8pt; font-weight: bold; color: #82444E; margin-top: 2px;">
-                            પ્રોપરાઇટર : {shop_settings['proprietor']}
+                        <div style="font-size: 7pt; color: #2a1a1a; margin-top: 1px;">
+                            પ્રોપરાઈટર : {shop_settings['proprietor']}
                         </div>
-                        <div style="font-size: 7.8pt; font-weight: bold; color: #B35446; margin-top: 1px;">
+                        <div style="font-size: 7pt; font-weight: bold; color: #b3261e;">
                             {shop_settings['tagline']}
                         </div>
-                        <div style="font-size: 7.2pt; color: #4A3B32; margin-top: 1px;">
+                        <div style="font-size: 6.8pt; color: #555555;">
                             {shop_settings['address']}
                         </div>
                     </td>
@@ -240,31 +241,31 @@ def generate_bill_html(bill_data: dict, shop_settings: dict = None) -> str:
     </tr>
 </table>
 
-<!-- 2. Ref No. & Date Line -->
-<table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 4px;">
+<!-- 2. Ref & Date Line -->
+<table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 3px; margin-bottom: 2px;">
     <tr>
-        <td width="50%" align="left" style="width: 50%; text-align: left; vertical-align: middle; font-size: 8.5pt;">
-            <b>રેફ. નં.</b> &nbsp;<u>&nbsp;&nbsp;{bill_no}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>
+        <td width="50%" align="left" style="width: 50%; text-align: left; vertical-align: middle; font-size: 8pt;">
+            <b>રેફ. નં.</b> &nbsp;<u>&nbsp;&nbsp;{bill_no}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>
         </td>
-        <td width="50%" align="right" style="width: 50%; text-align: right; vertical-align: middle; font-size: 8.5pt;">
-            <b>તા.</b> &nbsp;<u>&nbsp;&nbsp;{bill_date}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>
+        <td width="50%" align="right" style="width: 50%; text-align: right; vertical-align: middle; font-size: 8pt;">
+            <b>તા.</b> &nbsp;<u>&nbsp;&nbsp;{bill_date}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>
         </td>
     </tr>
 </table>
 
-<!-- 3. Customer Box (શેઠશ્રી) -->
-<table class="border-table" style="margin-bottom: 4px;">
+<!-- 3. Customer Box -->
+<table class="hd-table" style="margin-bottom: 2px;">
     <tr>
-        <td style="padding: 3px 6px;">
+        <td style="padding: 1.5px 4px;">
             <table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
                 <tr>
-                    <td style="width: 70%; font-size: 8.5pt;">
-                        <b style="color: #2C1810;">શેઠશ્રી</b> &nbsp;&nbsp;
-                        <u>&nbsp;&nbsp;<b>{cust_name}</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>
+                    <td style="width: 72%; font-size: 7.5pt;">
+                        <b>શેઠશ્રી</b> &nbsp;
+                        <u>&nbsp;<b>{cust_name}</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>
                     </td>
-                    <td style="width: 30%; text-align: right; font-size: 8.5pt;">
-                        <span style="color: #666666; font-size: 7.8pt;">Mobile </span> &nbsp;
-                        <b style="color: #2C1810;">{cust_phone}</b>
+                    <td style="width: 28%; text-align: right; font-size: 7.5pt;">
+                        <span style="color: #6f5b5b; font-size: 7pt;">Mobile </span> &nbsp;
+                        <b>{cust_phone}</b>
                     </td>
                 </tr>
             </table>
@@ -272,122 +273,123 @@ def generate_bill_html(bill_data: dict, shop_settings: dict = None) -> str:
     </tr>
 </table>
 
-<!-- 4. Items Table (8 Columns matching user design) -->
-<table style="width: 100%; border-collapse: collapse; border: 1.5px solid #82444E;">
+<!-- 4. Items Table (8 Columns) -->
+<table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border: 1.2px solid #6b2433;">
     <thead>
         <tr>
-            <th class="th-cell" style="width: 5%;">ક્રમ</th>
-            <th class="th-cell" style="width: 41%; text-align: center;">
+            <th class="th-cell" style="width: 6%;">ક્રમ</th>
+            <th class="th-cell" style="width: 38%; text-align: center;">
                 <div>વિગત</div>
-                <div style="font-size: 6.8pt; font-weight: normal; color: #444444;">Description</div>
+                <div style="font-size: 6pt; font-weight: normal; color: #555;">Description</div>
             </th>
             <th class="th-cell" style="width: 6%;">
                 <div>પીસ</div>
-                <div style="font-size: 6.8pt; font-weight: normal; color: #444444;">Pcs</div>
+                <div style="font-size: 6pt; font-weight: normal; color: #555;">Pcs</div>
             </th>
-            <th class="th-cell" style="width: 9%;">
+            <th class="th-cell" style="width: 10%;">
                 <div>ગ્રોસ વજન</div>
-                <div style="font-size: 6.8pt; font-weight: normal; color: #444444;">Gross g</div>
+                <div style="font-size: 6pt; font-weight: normal; color: #555;">Gross g</div>
             </th>
-            <th class="th-cell" style="width: 9%;">
+            <th class="th-cell" style="width: 10%;">
                 <div>નેટ વજન</div>
-                <div style="font-size: 6.8pt; font-weight: normal; color: #444444;">Net g</div>
+                <div style="font-size: 6pt; font-weight: normal; color: #555;">Net g</div>
             </th>
             <th class="th-cell" style="width: 10%;">
                 <div>ભાવ</div>
-                <div style="font-size: 6.8pt; font-weight: normal; color: #444444;">Rate/g</div>
+                <div style="font-size: 6pt; font-weight: normal; color: #555;">Rate/g</div>
             </th>
             <th class="th-cell" style="width: 8%;">
                 <div>મજૂરી</div>
-                <div style="font-size: 6.8pt; font-weight: normal; color: #444444;">Labour</div>
+                <div style="font-size: 6pt; font-weight: normal; color: #555;">Labour</div>
             </th>
             <th class="th-cell" style="width: 12%;">
                 <div>રકમ</div>
-                <div style="font-size: 6.8pt; font-weight: normal; color: #444444;">Amount ₹</div>
+                <div style="font-size: 6pt; font-weight: normal; color: #555;">Amount ₹</div>
             </th>
         </tr>
     </thead>
     <tbody>
         {items_html}
         <!-- Totals Row -->
-        <tr>
-            <td colspan="2" class="totals-cell" style="text-align: right; color: #2C1810; padding-right: 10px;">
+        <tr class="tot">
+            <td colspan="2" class="tot-cell" style="text-align: right; padding-right: 6px;">
                 કુલ / Total
             </td>
-            <td class="totals-cell" style="text-align: center; color: #2C1810;">{tot_pcs}</td>
-            <td class="totals-cell" style="text-align: right; color: #2C1810;">{tot_gr_wt:.3f}</td>
-            <td class="totals-cell" style="text-align: right; color: #2C1810;">{tot_net_wt:.3f}</td>
-            <td class="totals-cell">&nbsp;</td>
-            <td class="totals-cell" style="text-align: right; color: #2C1810;">{tot_labour:,.0f}</td>
-            <td class="totals-cell" style="text-align: right; color: #2C1810;">{tot_amt:,.2f}</td>
+            <td class="tot-cell" style="text-align: center;">{tot_pcs}</td>
+            <td class="tot-cell" style="text-align: right;">{tot_gr_wt:.3f}</td>
+            <td class="tot-cell" style="text-align: right;">{tot_net_wt:.3f}</td>
+            <td class="tot-cell">&nbsp;</td>
+            <td class="tot-cell" style="text-align: right;">{tot_labour:,.0f}</td>
+            <td class="tot-cell" style="text-align: right;">{tot_amt:,.2f}</td>
         </tr>
     </tbody>
 </table>
 
-<!-- 5. Bottom Section: Left Words Box & Right Calculation Table -->
-<table style="width: 100%; border-collapse: collapse; margin-top: 4px;">
+<!-- 5. Bottom Section: Words & Calculations -->
+<table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 3px;">
     <tr>
-        <!-- Left Amount in Words Box -->
-        <td style="width: 55%; vertical-align: top; border: 1.5px solid #82444E; padding: 6px 8px;">
-            <div style="font-size: 7.2pt; color: #555555;">અંકે રૂપિયા / Amount in words</div>
-            <div style="font-size: 8pt; font-weight: bold; color: #2C1810; margin-top: 4px; line-height: 1.3;">
+        <!-- Left Words Box -->
+        <td width="55%" align="left" style="width: 55%; vertical-align: top; border: 1px solid #6b2433; padding: 4px 6px;">
+            <div style="font-size: 7pt; color: #6f5b5b; font-weight: 600;">અંકે રૂપિયા / Amount in words</div>
+            <div style="font-size: 7.5pt; font-weight: bold; color: #2a1a1a; margin-top: 3px; line-height: 1.2;">
                 {words_inr}
             </div>
         </td>
-        <td style="width: 2%;">&nbsp;</td>
+        <td width="2%" style="width: 2%;">&nbsp;</td>
         <!-- Right Calculation Table -->
-        <td style="width: 43%; vertical-align: top; padding: 0;">
-            <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #82444E;">
+        <td width="43%" align="right" style="width: 43%; vertical-align: top; padding: 0;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border: 1px solid #6b2433;">
                 <tr class="calc-row">
-                    <td style="width: 52%; background-color: #FFFFFF; font-size: 7.8pt;">કરપાત્ર રકમ</td>
-                    <td style="width: 48%; text-align: right; font-weight: bold; font-size: 7.8pt; white-space: nowrap;">{subtotal_rs:,.2f}</td>
+                    <td style="width: 55%; background-color: #FFFFFF;">કરપાત્ર રકમ</td>
+                    <td style="width: 45%; text-align: right; font-weight: bold; white-space: nowrap;">{subtotal_rs:,.2f}</td>
                 </tr>
                 <tr class="calc-row">
-                    <td style="background-color: #FFFFFF; font-size: 7.8pt;">CGST &nbsp;&nbsp; 1.5 %</td>
-                    <td style="text-align: right; font-size: 7.8pt; white-space: nowrap;">{cgst_rs:,.2f}</td>
+                    <td style="background-color: #FFFFFF;">CGST &nbsp; 1.5 %</td>
+                    <td style="text-align: right; white-space: nowrap;">{cgst_rs:,.2f}</td>
                 </tr>
                 <tr class="calc-row">
-                    <td style="background-color: #FFFFFF; font-size: 7.8pt;">SGST 1.5 %</td>
-                    <td style="text-align: right; font-size: 7.8pt; white-space: nowrap;">{sgst_rs:,.2f}</td>
+                    <td style="background-color: #FFFFFF;">SGST 1.5 %</td>
+                    <td style="text-align: right; white-space: nowrap;">{sgst_rs:,.2f}</td>
                 </tr>
                 <tr class="calc-row">
-                    <td style="background-color: #FFFFFF; font-size: 7.8pt;">Round off</td>
-                    <td style="text-align: right; font-size: 7.8pt; white-space: nowrap;">{round_off_str}</td>
+                    <td style="background-color: #FFFFFF;">Round off</td>
+                    <td style="text-align: right; white-space: nowrap;">{round_off_str}</td>
                 </tr>
-                <tr class="calc-row" style="background-color: #F1D9CF;">
-                    <td style="font-weight: bold; color: #2C1810; font-size: 8pt; white-space: nowrap;">કુલ રકમ / Total</td>
-                    <td style="text-align: right; font-weight: bold; color: #2C1810; font-size: 8.5pt; white-space: nowrap;">{rounded_grand:,.2f}</td>
-                </tr>
-                <tr class="calc-row">
-                    <td style="background-color: #FFFFFF; font-size: 7.8pt; white-space: nowrap;">જમા / Received</td>
-                    <td style="text-align: right; color: #16A34A; font-weight: bold; font-size: 7.8pt; white-space: nowrap;">{paid_rs:,.0f}</td>
+                <tr class="calc-row" style="background-color: #f1d9cf;">
+                    <td style="font-weight: bold; font-size: 8pt; white-space: nowrap;">કુલ રકમ / Total</td>
+                    <td style="text-align: right; font-weight: bold; font-size: 8pt; white-space: nowrap;">{rounded_grand:,.2f}</td>
                 </tr>
                 <tr class="calc-row">
-                    <td style="background-color: #FFFFFF; font-weight: bold; font-size: 7.8pt; white-space: nowrap;">બાકી / Balance</td>
-                    <td style="text-align: right; font-weight: bold; color: #DC2626; font-size: 8pt; white-space: nowrap;">{balance_rs:,.2f}</td>
+                    <td style="background-color: #FFFFFF; white-space: nowrap;">જમા / Received</td>
+                    <td style="text-align: right; color: #16A34A; font-weight: bold; white-space: nowrap;">{paid_rs:,.0f}</td>
+                </tr>
+                <tr class="calc-row">
+                    <td style="background-color: #FFFFFF; font-weight: bold; white-space: nowrap;">બાકી / Balance</td>
+                    <td style="text-align: right; font-weight: bold; color: #DC2626; white-space: nowrap;">{balance_rs:,.2f}</td>
                 </tr>
             </table>
         </td>
     </tr>
 </table>
 
-<!-- 6. Footer Terms & Dual Signatures -->
-<table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 24px;">
+<!-- 6. Footer -->
+<table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 1px;">
     <tr>
-        <td width="35%" align="left" style="width: 35%; font-size: 7.8pt; color: #333333; vertical-align: top;">
-            શરતો: બાવળા જ્યુરિસ્ટિક્શનને આધીન.
+        <td width="35%" align="left" style="width: 35%; font-size: 6.8pt; color: #333333; vertical-align: top;">
+            શરતો: બાવળા જ્યુરિસ્ડિક્શનને આધીન.<br>
+            <span style="color: #6f5b5b; font-size: 6pt;">Terms: Subject to Bavla jurisdiction.</span>
         </td>
         <td width="35%" align="center" style="width: 35%; text-align: center; vertical-align: top;">
-            <div style="font-size: 8pt; font-weight: bold; color: #2C1810;">
+            <div style="font-size: 7.2pt; font-weight: 600; color: #2a1a1a;">
                 ________________________<br>
                 ગ્રાહકની સહી
             </div>
         </td>
         <td width="30%" align="right" style="width: 30%; text-align: right; vertical-align: top;">
-            <div style="font-size: 8.5pt; font-weight: bold; color: #6B2433;">
+            <div style="font-size: 7.2pt; font-weight: 600; color: #6b2433;">
                 ________________________<br>
-                {shop_settings['shop_name_gu']}<br>
-                <span style="font-size: 7.2pt; color: #555555; font-weight: normal;">પ્રોપ્રાઇટર</span>
+                સોની નટવરલાલ હિંમતલાલ<br>
+                <span style="font-size: 6.5pt; color: #555555; font-weight: normal;">પ્રોપરાઈટર</span>
             </div>
         </td>
     </tr>
@@ -398,15 +400,19 @@ def generate_bill_html(bill_data: dict, shop_settings: dict = None) -> str:
     """
     return html
 
-def print_or_pdf_bill(bill_data: dict, parent_window=None, save_pdf_path: str = None) -> bool:
+def print_or_pdf_bill(bill_data: dict, parent_window=None, save_pdf_path: str = None, page_size: str = "A5") -> bool:
     """
-    Renders the bill and opens print dialog or exports to PDF at true 1-page A4 proportions.
+    Renders the bill and opens print dialog or exports to PDF at true 1-page proportions (A5 by default).
     """
     html_content = generate_bill_html(bill_data)
     
     printer = QPrinter(QPrinter.PrinterResolution)
-    printer.setPageSize(QPageSize(QPageSize.A4))
-    printer.setPageMargins(QMarginsF(4, 4, 4, 4), QPageLayout.Millimeter)
+    if page_size.upper() == "A4":
+        printer.setPageSize(QPageSize(QPageSize.A4))
+        printer.setPageMargins(QMarginsF(4, 4, 4, 4), QPageLayout.Millimeter)
+    else:
+        printer.setPageSize(QPageSize(QPageSize.A5))
+        printer.setPageMargins(QMarginsF(3, 3, 3, 3), QPageLayout.Millimeter)
 
     if save_pdf_path:
         dirname = os.path.dirname(save_pdf_path)
@@ -416,6 +422,7 @@ def print_or_pdf_bill(bill_data: dict, parent_window=None, save_pdf_path: str = 
         printer.setOutputFileName(save_pdf_path)
         paint_rect = printer.pageLayout().paintRectPixels(printer.resolution())
         doc = QTextDocument()
+        doc.setDocumentMargin(0)
         doc.setPageSize(QSizeF(paint_rect.width(), paint_rect.height()))
         doc.setHtml(html_content)
         doc.print_(printer)
@@ -425,14 +432,15 @@ def print_or_pdf_bill(bill_data: dict, parent_window=None, save_pdf_path: str = 
         if dialog.exec():
             paint_rect = printer.pageLayout().paintRectPixels(printer.resolution())
             doc = QTextDocument()
+            doc.setDocumentMargin(0)
             doc.setPageSize(QSizeF(paint_rect.width(), paint_rect.height()))
             doc.setHtml(html_content)
             doc.print_(printer)
             return True
     return False
 
-def export_bill_to_pdf(bill_data: dict, output_path: str) -> bool:
-    """Exports bill directly to PDF file silently at true 1-page A4 proportions."""
+def export_bill_to_pdf(bill_data: dict, output_path: str, page_size: str = "A5") -> bool:
+    """Exports bill directly to PDF file silently at true 1-page proportions."""
     try:
         dirname = os.path.dirname(output_path)
         if dirname:
@@ -441,12 +449,17 @@ def export_bill_to_pdf(bill_data: dict, output_path: str) -> bool:
 
         printer = QPrinter(QPrinter.PrinterResolution)
         printer.setOutputFormat(QPrinter.PdfFormat)
-        printer.setPageSize(QPageSize(QPageSize.A4))
-        printer.setPageMargins(QMarginsF(4, 4, 4, 4), QPageLayout.Millimeter)
+        if page_size.upper() == "A4":
+            printer.setPageSize(QPageSize(QPageSize.A4))
+            printer.setPageMargins(QMarginsF(4, 4, 4, 4), QPageLayout.Millimeter)
+        else:
+            printer.setPageSize(QPageSize(QPageSize.A5))
+            printer.setPageMargins(QMarginsF(3, 3, 3, 3), QPageLayout.Millimeter)
         printer.setOutputFileName(output_path)
 
         paint_rect = printer.pageLayout().paintRectPixels(printer.resolution())
         doc = QTextDocument()
+        doc.setDocumentMargin(0)
         doc.setPageSize(QSizeF(paint_rect.width(), paint_rect.height()))
         doc.setHtml(html_content)
         doc.print_(printer)
