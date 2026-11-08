@@ -1,23 +1,33 @@
 """
-print_manager.py - Generates printable bills and official letterhead PDF invoices.
-Replicates the exact physical bill pad of Soni Natvarlal Himmatlal:
-- Deep Maroon (#5C1D24) & Warm Terracotta (#B86B4B) traditional Gujarati jewelry theme
-- Official sacred invocations: વાયુ આદિતી | ॥ શ્રી હરિ ॥ | બ્રિજેશભાઈ ૯૮૨૫૧ ૬૨૦૬૫
-- Authentic GSTIN (24BPXPS8279A1Z7) and Bavla shop address
-- Vector-rendered 'nh' monogram logo
-- Full itemized table with HSN, Net Weight (g), Rate, Making, and Amount
-- Clear GST breakdown, Grand Total box, Paid, Balance Udhar, Terms & Dual Signatures
-- Formatted precisely to fit on exactly 1 single A4 page
+print_manager.py - Official Computerized GST Tax Invoice Generator.
+Replicates the authentic Gujarati Jewelry Tax Invoice structure (Umiya Jewellers format)
+styled with the deep maroon (#5C1D24) and warm terracotta (#B86B4B) theme of Soni Natvarlal Himmatlal:
+
+- 3-Column Header: Monogram Logo ('nh') + Ref | Sacred Invocation & Complete Shop Branding | Page No & 'ORIGINAL FOR RECIPIENT'
+- Tax Invoice Full-Width Bar
+- Dual-Column Meta Table: Invoice No, Date, State (Gujarat 24) | Ledger Opening & Closing Balances (Dr/Cr)
+- Receiver Card: Name, Address, Mobile, GSTIN & State
+- 10-Column Itemized Jewelry Table:
+    SNo | Product Description | HSN Code | Pcs | Gr Wt. | Net Wt | Rate | Amount | Labour | Taxable Value
+- Bottom Totals Row: Pcs, Gross Wt, Net Wt, Amount, Labour, Taxable Value
+- Left Summary: Voucher Desc, Full Amount in English Words (RUPEES ... ONLY), Guarantee Terms & Customer Signatory
+- Right Calculation & Authorization:
+    Net Amount, CGST 1.5%, SGST 1.5%, Grand Total, Paid Amount, Bill Outstanding Udhar,
+    Statutory Certification, Shop Typography & Authorized Signatory
+- Strictly engineered to fit on 1 single page of A4.
 """
 
 import os
+import re
 import base64
+from typing import Optional, Dict
+
 from PySide6.QtGui import QTextDocument, QPageSize, QPageLayout, QImage, QPainter, QColor
 from PySide6.QtCore import QSizeF, QMarginsF, QByteArray, QBuffer, QIODevice
 from PySide6.QtPrintSupport import QPrinter, QPrintDialog
 from PySide6.QtSvg import QSvgRenderer
 
-from format_utils import format_inr
+from format_utils import format_inr, num_to_words_inr
 from settings_manager import load_settings
 
 _CACHED_LOGO_B64 = None
@@ -76,7 +86,9 @@ def get_nh_logo_base64() -> str:
 
 def generate_bill_html(bill_data: dict, shop_settings: dict = None) -> str:
     """
-    Generates an HTML receipt strictly matching the real paper bill pad of Soni Natvarlal Himmatlal.
+    Generates the official Computerized GST Tax Invoice HTML strictly structured
+    like the traditional Gujarat jewelry tax invoice (Umiya Jewellers pattern) with
+    Soni Natvarlal Himmatlal's deep maroon and terracotta visual identity.
     """
     if not shop_settings:
         st = load_settings()
@@ -85,33 +97,103 @@ def generate_bill_html(bill_data: dict, shop_settings: dict = None) -> str:
             "header_center": st.get("header_center", "॥ શ્રી હરિ ॥"),
             "header_right": st.get("header_right", "બ્રિજેશભાઈ ૯૮૨૫૧ ૬૨૦૬૫"),
             "phone_display": st.get("owner_phone_display", "98251 62065"),
+            "shop_name_en": st.get("shop_name_en", "SONI NATVARLAL HIMMATLAL"),
             "shop_name_gu": st.get("shop_name_gu", "સોની નટવરલાલ હિંમતલાલ"),
-            "shop_name_en": st.get("shop_name_en", "Soni Natvarlal Himmatlal"),
             "proprietor": st.get("proprietor", "સોની બ્રિજેશ નટવરલાલ"),
             "tagline": st.get("tagline", "સોના-ચાંદીના દાગીના બનાવનાર તથા વેચનાર."),
-            "address": st.get("address", "જૈન દેરાસર પાસે, બાવળા-૩૮૨૨૨૦. જી. અમદાવાદ."),
+            "address": st.get("address", "જૈન દેરાસર પાસે, મેઈન બજાર, બાવળા-૩૮૨૨૨૦. જી. અમદાવાદ."),
             "gstin": st.get("gstin", "24BPXPS8279A1Z7"),
+            "state": "Gujarat",
+            "state_code": "24"
         }
 
     logo_b64 = get_nh_logo_base64()
+    bill_no = bill_data.get("bill_no", 1)
+    bill_no_display = f"T1-{bill_no:05d}"
+    bill_date = bill_data.get("bill_date", "")
 
+    # Customer Information
+    cust_name = bill_data.get("customer_name", "") or bill_data.get("name_gu", "")
+    if bill_data.get("name_en") and bill_data.get("name_en") != cust_name:
+        cust_name_display = f"{cust_name} ({bill_data.get('name_en')})"
+    else:
+        cust_name_display = cust_name
+
+    cust_addr = bill_data.get("customer_address", "") or bill_data.get("address", "") or "-"
+    cust_phone = bill_data.get("customer_mobile", "") or bill_data.get("mobile", "") or "-"
+    cust_gstin = bill_data.get("gstin", "") or "URP (Unregistered)"
+
+    # Ledger Opening & Closing Balances
+    opening_bal_paise = bill_data.get("opening_balance_paise", 0)
+    closing_bal_paise = bill_data.get("closing_balance_paise", bill_data.get("balance_paise", 0))
+
+    if opening_bal_paise >= 0:
+        opening_bal_str = f"{format_inr(opening_bal_paise / 100.0, symbol='')} Dr"
+    else:
+        opening_bal_str = f"{format_inr(abs(opening_bal_paise) / 100.0, symbol='')} Cr"
+
+    if closing_bal_paise >= 0:
+        closing_bal_str = f"{format_inr(closing_bal_paise / 100.0, symbol='')} Dr"
+    else:
+        closing_bal_str = f"{format_inr(abs(closing_bal_paise) / 100.0, symbol='')} Cr"
+
+    items = bill_data.get("items", [])
     items_html = ""
-    for idx, item in enumerate(bill_data.get("items", [])):
+    tot_pcs = 0
+    tot_gr_wt = 0.0
+    tot_net_wt = 0.0
+    tot_amt = 0.0
+    tot_labour = 0.0
+    tot_taxable = 0.0
+
+    for idx, item in enumerate(items):
+        pcs = item.get("pcs", 1)
         wt_g = item.get("weight_mg", 0) / 1000.0
+        gr_wt_g = item.get("gross_weight_mg", item.get("weight_mg", 0)) / 1000.0
         rate_rs = item.get("rate_paise", 0) / 100.0
         making_rs = item.get("making_paise", 0) / 100.0
-        amt_rs = item.get("amount_paise", 0) / 100.0
+        amount_rs = item.get("amount_paise", 0) / 100.0
+        base_amt_rs = max(0.0, amount_rs - making_rs) if making_rs > 0 else amount_rs
+        taxable_rs = amount_rs
         hsn_val = item.get("hsn_code", "") or "7113"
-        
+
+        tot_pcs += pcs
+        tot_gr_wt += gr_wt_g
+        tot_net_wt += wt_g
+        tot_amt += base_amt_rs
+        tot_labour += making_rs
+        tot_taxable += taxable_rs
+
         items_html += f"""
         <tr>
-            <td style="padding: 4px 3px; border: 1px solid #D6C7B8; text-align: center; font-size: 8.5pt;">{idx + 1}</td>
-            <td style="padding: 4px 5px; border: 1px solid #D6C7B8; font-weight: bold; font-size: 8.5pt; color: #2C1810;">{item.get('description', '')}</td>
-            <td style="padding: 4px 3px; border: 1px solid #D6C7B8; text-align: center; font-size: 8pt; color: #555555;">{hsn_val}</td>
-            <td style="padding: 4px 5px; border: 1px solid #D6C7B8; text-align: right; font-weight: bold; font-size: 8.5pt;">{wt_g:.3f} g</td>
-            <td style="padding: 4px 5px; border: 1px solid #D6C7B8; text-align: right; font-size: 8pt;">{format_inr(rate_rs)}</td>
-            <td style="padding: 4px 5px; border: 1px solid #D6C7B8; text-align: right; font-size: 8pt;">{format_inr(making_rs)}</td>
-            <td style="padding: 4px 5px; border: 1px solid #D6C7B8; text-align: right; font-weight: bold; font-size: 8.5pt; color: #5C1D24;">{format_inr(amt_rs)}</td>
+            <td style="text-align: center; border-left: 1px solid #5C1D24; border-right: 1px solid #5C1D24; padding: 2.5px 2px; font-size: 7.5pt;">{idx + 1}</td>
+            <td style="text-align: left; border-right: 1px solid #5C1D24; padding: 2.5px 4px; font-weight: bold; font-size: 7.5pt; color: #2C1810;">{item.get('description', '')}</td>
+            <td style="text-align: center; border-right: 1px solid #5C1D24; padding: 2.5px 2px; font-size: 7pt; color: #444444;">{hsn_val}</td>
+            <td style="text-align: center; border-right: 1px solid #5C1D24; padding: 2.5px 2px; font-size: 7.5pt;">{pcs}</td>
+            <td style="text-align: right; border-right: 1px solid #5C1D24; padding: 2.5px 4px; font-size: 7.5pt;">{gr_wt_g:.3f}</td>
+            <td style="text-align: right; border-right: 1px solid #5C1D24; padding: 2.5px 4px; font-weight: bold; font-size: 7.5pt;">{wt_g:.3f}</td>
+            <td style="text-align: right; border-right: 1px solid #5C1D24; padding: 2.5px 4px; font-size: 7.5pt;">{rate_rs:,.2f}</td>
+            <td style="text-align: right; border-right: 1px solid #5C1D24; padding: 2.5px 4px; font-size: 7.5pt;">{base_amt_rs:,.2f}</td>
+            <td style="text-align: right; border-right: 1px solid #5C1D24; padding: 2.5px 4px; font-size: 7.5pt;">{making_rs:,.2f}</td>
+            <td style="text-align: right; border-right: 1px solid #5C1D24; padding: 2.5px 4px; font-weight: bold; font-size: 7.5pt; color: #5C1D24;">{taxable_rs:,.2f}</td>
+        </tr>
+        """
+
+    # Extra filler rows to give the authentic invoice grid look without causing page overflow
+    fill_count = max(0, 2 - len(items))
+    for _ in range(fill_count):
+        items_html += """
+        <tr>
+            <td style="border-left: 1px solid #5C1D24; border-right: 1px solid #5C1D24; height: 12px;">&nbsp;</td>
+            <td style="border-right: 1px solid #5C1D24;">&nbsp;</td>
+            <td style="border-right: 1px solid #5C1D24;">&nbsp;</td>
+            <td style="border-right: 1px solid #5C1D24;">&nbsp;</td>
+            <td style="border-right: 1px solid #5C1D24;">&nbsp;</td>
+            <td style="border-right: 1px solid #5C1D24;">&nbsp;</td>
+            <td style="border-right: 1px solid #5C1D24;">&nbsp;</td>
+            <td style="border-right: 1px solid #5C1D24;">&nbsp;</td>
+            <td style="border-right: 1px solid #5C1D24;">&nbsp;</td>
+            <td style="border-right: 1px solid #5C1D24;">&nbsp;</td>
         </tr>
         """
 
@@ -122,19 +204,16 @@ def generate_bill_html(bill_data: dict, shop_settings: dict = None) -> str:
     paid_rs = bill_data.get("paid_paise", 0) / 100.0
     balance_rs = bill_data.get("balance_paise", 0) / 100.0
 
-    cust_name = bill_data.get("name_gu", "") or bill_data.get("customer_name", "")
-    cust_en = f" ({bill_data.get('name_en')})" if bill_data.get("name_en") else ""
-    cust_phone = bill_data.get("mobile", "") or bill_data.get("customer_mobile", "")
-    cust_addr = bill_data.get("address", "") or bill_data.get("customer_address", "") or "-"
-    pan_display = bill_data.get("pan_no", "") or "-"
-    aadhaar_display = bill_data.get("aadhaar_no", "") or "-"
+    words_inr = num_to_words_inr(grand_rs)
 
-    mode_display = bill_data.get("payment_mode", "CASH")
-    if bill_data.get("payment_ref"):
-        mode_display += f" ({bill_data.get('payment_ref')})"
+    payment_mode = bill_data.get("payment_mode", "CASH")
+    payment_ref = bill_data.get("payment_ref", "")
+    vch_desc = payment_mode
+    if payment_ref:
+        vch_desc += f" (Ref: {payment_ref})"
 
-    balance_color = "#DC2626" if balance_rs > 0 else "#16A34A"
-    balance_status = "બાકી ઉધાર (Udhar Due)" if balance_rs > 0 else "ચૂકતે હિસાબ (Settled)"
+    paid_mode_label = "Chq Amount :" if "CHQ" in payment_mode or "CHEQUE" in payment_mode else "Paid Amount :"
+    outstanding_color = "#DC2626" if balance_rs > 0 else "#16A34A"
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -147,230 +226,307 @@ def generate_bill_html(bill_data: dict, shop_settings: dict = None) -> str:
         padding: 0;
         color: #2C1810;
         background-color: #FFFFFF;
+        font-size: 7.5pt;
     }}
-    .top-header-table {{
-        width: 100%;
-        border-collapse: collapse;
-        padding-bottom: 2px;
-        border-bottom: 1.5px solid #5C1D24;
-    }}
-    .brand-table {{
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 2px;
-        padding-bottom: 2px;
-        border-bottom: 1px solid #B86B4B;
-    }}
-    .ref-date-table {{
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 2px;
-    }}
-    .cust-box {{
+    .outer-table {{
         width: 100%;
         border: 1.5px solid #5C1D24;
-        background-color: #FFFFFF;
         border-collapse: collapse;
-        margin-top: 2px;
     }}
-    .cust-box td {{
-        padding: 2px 6px;
-        font-size: 8pt;
+    .tax-invoice-bar {{
+        background-color: #5C1D24;
+        color: #FFFFFF;
+        text-align: center;
+        font-weight: bold;
+        font-size: 9.5pt;
+        padding: 2.5px 0;
+        letter-spacing: 1.5px;
+    }}
+    .meta-table {{
+        width: 100%;
+        border-collapse: collapse;
+    }}
+    .meta-table td {{
+        padding: 2.5px 4px;
+        font-size: 7.2pt;
+        line-height: 1.25;
+        vertical-align: top;
+    }}
+    .receiver-header {{
+        font-weight: bold;
+        font-size: 7.5pt;
+        color: #5C1D24;
+        background-color: #FBF5F0;
+        padding: 2px 4px;
+        border-top: 1px solid #5C1D24;
+        border-bottom: 1px solid #5C1D24;
+    }}
+    .receiver-table {{
+        width: 100%;
+        border-collapse: collapse;
+    }}
+    .receiver-table td {{
+        padding: 1.5px 4px;
+        font-size: 7.2pt;
         line-height: 1.25;
     }}
     .items-table {{
         width: 100%;
         border-collapse: collapse;
-        margin-top: 3px;
+        border-top: 1.2px solid #5C1D24;
     }}
     .items-table th {{
         background-color: #5C1D24;
         color: #FFFFFF;
-        font-size: 8pt;
+        font-size: 6.8pt;
         font-weight: bold;
-        padding: 3px 3px;
+        padding: 3px 2px;
         border: 1px solid #5C1D24;
+        text-align: center;
     }}
-    .totals-table {{
+    .totals-row td {{
+        border-top: 1.2px solid #5C1D24;
+        border-bottom: 1.2px solid #5C1D24;
+        border-left: 1px solid #5C1D24;
+        border-right: 1px solid #5C1D24;
+        background-color: #FBF5F0;
+        font-weight: bold;
+        font-size: 7.2pt;
+        padding: 2.5px 3px;
+    }}
+    .calc-table {{
         width: 100%;
         border-collapse: collapse;
-        margin-top: 3px;
     }}
-    .grand-box {{
-        background-color: #FAF0E6;
-        border: 1.5px solid #5C1D24;
-        font-size: 9pt;
-        font-weight: bold;
-        color: #5C1D24;
-    }}
-    .terms {{
-        font-size: 6.5pt;
-        color: #555555;
-        border-top: 1px solid #D6C7B8;
-        padding-top: 2px;
-        margin-top: 3px;
+    .calc-table td {{
+        border: 1px solid #5C1D24;
+        padding: 2px 4px;
+        font-size: 7.2pt;
         line-height: 1.2;
     }}
-    .sig-table {{
-        width: 100%;
-        margin-top: 3px;
-        font-size: 7.5pt;
+    .grand-row td {{
+        background-color: #F6ECE6;
         font-weight: bold;
+        color: #5C1D24;
+        font-size: 8pt;
     }}
 </style>
 </head>
 <body>
-<table style="width: 100%; border: 2.5px solid #5C1D24; border-collapse: collapse; background-color: #FCFAF6;">
-<tr>
-<td style="padding: 4px 8px; vertical-align: top;">
 
-    <!-- 1. Top Sacred & Contact Bar (matching pad) -->
-    <table class="top-header-table">
-        <tr>
-            <td style="width: 33%; vertical-align: top;">
-                <span style="font-size: 8.5pt; font-weight: bold; color: #5C1D24;">{shop_settings['header_left']}</span><br>
-                <span style="font-size: 7.5pt; font-weight: bold; color: #2C1810;">GSTIN : {shop_settings['gstin']}</span>
-            </td>
-            <td style="width: 34%; text-align: center; vertical-align: middle;">
-                <span style="font-size: 11pt; font-weight: bold; color: #5C1D24; letter-spacing: 2px;">{shop_settings['header_center']}</span>
-            </td>
-            <td style="width: 33%; text-align: right; vertical-align: top;">
-                <span style="font-size: 9pt; font-weight: bold; color: #5C1D24;">{shop_settings['header_right']}</span><br>
-                <span style="font-size: 7.5pt; color: #555555;">મો. +91 {shop_settings['phone_display']}</span>
-            </td>
-        </tr>
-    </table>
+<table class="outer-table">
+    <!-- 1. Top Three-Column Header (Logo | Shop Header | Page & Original For Recipient) -->
+    <tr>
+        <td style="width: 18%; border-right: 1px solid #5C1D24; text-align: center; vertical-align: middle; padding: 3px;">
+            <img src="data:image/png;base64,{logo_b64}" width="46" height="46"/><br>
+            <span style="font-size: 7.5pt; font-weight: bold; color: #5C1D24;">{bill_no_display}</span>
+        </td>
+        <td style="width: 62%; border-right: 1px solid #5C1D24; text-align: center; vertical-align: top; padding: 2px 5px;">
+            <div style="font-size: 7pt; font-weight: bold; color: #5C1D24; letter-spacing: 0.5px;">
+                {shop_settings['header_left']} &nbsp;&nbsp;|&nbsp;&nbsp; {shop_settings['header_center']} &nbsp;&nbsp;|&nbsp;&nbsp; {shop_settings['header_right']}
+            </div>
+            <div style="font-size: 13.5pt; font-weight: bold; color: #5C1D24; letter-spacing: 0.5px; margin-top: 1px; line-height: 1.1;">
+                {shop_settings['shop_name_en']}
+            </div>
+            <div style="font-size: 8.5pt; font-weight: bold; color: #5C1D24; margin-top: 0px;">
+                {shop_settings['shop_name_gu']}
+            </div>
+            <div style="font-size: 7pt; font-weight: bold; color: #B86B4B; margin-top: 0px;">
+                પ્રોપરાઇટર : {shop_settings['proprietor']} &nbsp;|&nbsp; {shop_settings['tagline']}
+            </div>
+            <div style="font-size: 7pt; color: #2C1810; margin-top: 0px;">
+                {shop_settings['address']}
+            </div>
+            <div style="font-size: 7pt; color: #2C1810;">
+                BAVLA &nbsp; Mo : {shop_settings['phone_display']} &nbsp;&nbsp; Ph : {shop_settings['phone_display']}
+            </div>
+            <div style="font-size: 7.5pt; font-weight: bold; color: #5C1D24; margin-top: 0px;">
+                GSTIN : {shop_settings['gstin']}
+            </div>
+        </td>
+        <td style="width: 20%; vertical-align: top; padding: 2px 4px;">
+            <div style="text-align: right; font-size: 8pt; font-weight: bold; color: #2C1810;">1</div>
+            <div style="text-align: center; font-size: 7.5pt; font-weight: bold; color: #5C1D24; margin-top: 8px; line-height: 1.25;">
+                ORIGINAL FOR<br>RECIPIENT
+            </div>
+        </td>
+    </tr>
 
-    <!-- 2. Main Brand Letterhead (Logo + Gujarati Typography) -->
-    <table class="brand-table">
-        <tr>
-            <td style="width: 58px; vertical-align: middle; padding: 1px 4px 1px 0;">
-                <img src="data:image/png;base64,{logo_b64}" width="52" height="52"/>
-            </td>
-            <td style="vertical-align: middle; padding-left: 4px;">
-                <div style="font-size: 18pt; font-weight: bold; color: #5C1D24; letter-spacing: 0.5px; line-height: 1.1;">{shop_settings['shop_name_gu']}</div>
-                <div style="font-size: 8.5pt; font-weight: bold; color: #B86B4B; margin-top: 1px;">પ્રોપરાઈટર : {shop_settings['proprietor']}</div>
-                <div style="font-size: 8pt; font-weight: 600; color: #3A2426; margin-top: 1px;">{shop_settings['tagline']} ({shop_settings['shop_name_en']})</div>
-                <div style="font-size: 7.5pt; color: #4A3B32; margin-top: 1px;">{shop_settings['address']}</div>
-            </td>
-        </tr>
-    </table>
+    <!-- 2. Tax Invoice Banner -->
+    <tr>
+        <td colspan="3" class="tax-invoice-bar">Tax Invoice</td>
+    </tr>
 
-    <!-- 3. Ref No. & Date Line (Exact matching pad) -->
-    <table class="ref-date-table">
-        <tr>
-            <td style="width: 50%; font-size: 9pt; padding: 2px 0;">
-                <b style="color: #5C1D24;">રેફ. નં. :</b> <span style="font-size: 10.5pt; font-weight: bold; color: #2C1810;">#{bill_data.get('bill_no', '')}</span>
-                &nbsp;&nbsp;<span style="background-color: #5C1D24; color: #FFFFFF; font-size: 7pt; font-weight: bold; padding: 1px 5px; border-radius: 2px;">TAX INVOICE (પાકું બિલ)</span>
-            </td>
-            <td style="width: 50%; text-align: right; font-size: 9pt; padding: 2px 0;">
-                <b style="color: #5C1D24;">તા. :</b> <span style="font-weight: bold; color: #2C1810;">{bill_data.get('bill_date', '')}</span>
-            </td>
-        </tr>
-    </table>
+    <!-- 3. Metadata Table (Invoice No, Date, State | Ledger Opening & Closing Bal) -->
+    <tr>
+        <td colspan="3" style="padding: 0;">
+            <table class="meta-table">
+                <tr>
+                    <td style="width: 58%; border-right: 1px solid #5C1D24; border-bottom: 1px solid #5C1D24;">
+                        <b>Invoice No :</b> <span style="font-weight: bold; color: #5C1D24;">{bill_no_display}</span><br>
+                        <b>Invoice Date :</b> <span style="font-weight: bold;">{bill_date}</span><br>
+                        <b>State :</b> {shop_settings['state']} (Code: {shop_settings['state_code']})
+                    </td>
+                    <td style="width: 42%; border-bottom: 1px solid #5C1D24; padding-left: 6px; padding-right: 4px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 1px 0; font-size: 7.2pt;"><b>Ledger Opening Bal :</b></td>
+                                <td style="padding: 1px 0; text-align: right; font-weight: bold; font-size: 7.2pt;">{opening_bal_str}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 1px 0; font-size: 7.2pt;"><b>Ledger Closing Bal :</b></td>
+                                <td style="padding: 1px 0; text-align: right; font-weight: bold; font-size: 7.2pt;">{closing_bal_str}</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
 
-    <!-- 4. Customer Info Card (શેઠશ્રી) -->
-    <table class="cust-box">
-        <tr>
-            <td style="width: 60%; border-right: 1px solid #D6C7B8;">
-                <b style="color: #5C1D24;">શેઠશ્રી (Customer) :</b> <span style="font-size: 9.5pt; font-weight: bold; color: #2C1810;">{cust_name}{cust_en}</span><br>
-                <b>સરનામું (Address) :</b> {cust_addr}
-            </td>
-            <td style="width: 40%;">
-                <b>મોબાઇલ :</b> <span style="font-weight: bold;">{cust_phone}</span><br>
-                <b>PAN :</b> {pan_display} &nbsp;|&nbsp; <b>આધાર :</b> {aadhaar_display}
-            </td>
-        </tr>
-    </table>
+    <!-- 4. Details of Receiver (Billed to) -->
+    <tr>
+        <td colspan="3" class="receiver-header">Details of Receiver (Billed to) :</td>
+    </tr>
+    <tr>
+        <td colspan="3" style="padding: 0;">
+            <table class="receiver-table">
+                <tr>
+                    <td style="width: 14%; font-weight: bold; color: #5C1D24;">Name :</td>
+                    <td colspan="3" style="width: 86%; font-weight: bold; font-size: 8.2pt; color: #2C1810;">{cust_name_display}</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold; color: #5C1D24;">Address :</td>
+                    <td colspan="3">{cust_addr}</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold; color: #5C1D24;">Mobile :</td>
+                    <td colspan="3" style="font-weight: bold;">{cust_phone}</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold; color: #5C1D24;">GSTIN :</td>
+                    <td style="width: 48%; font-weight: bold;">{cust_gstin}</td>
+                    <td style="width: 12%; font-weight: bold; color: #5C1D24; text-align: right;">State :</td>
+                    <td style="width: 26%; padding-left: 4px;">Gujarat</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
 
-    <!-- 5. Itemized Table (દાગીનાની વિગત) -->
-    <table class="items-table">
-        <thead>
-            <tr>
-                <th style="width: 5%;">#</th>
-                <th style="width: 35%; text-align: left;">દાગીનાની વિગત (Description)</th>
-                <th style="width: 9%; text-align: center;">HSN</th>
-                <th style="width: 12%; text-align: right;">વજન (Weight)</th>
-                <th style="width: 13%; text-align: right;">ભાવ (Rate)</th>
-                <th style="width: 11%; text-align: right;">મજૂરી (Making)</th>
-                <th style="width: 15%; text-align: right;">રકમ (Amount)</th>
-            </tr>
-        </thead>
-        <tbody>
-            {items_html}
-        </tbody>
-    </table>
-
-    <!-- 6. Totals & Payment Breakdown -->
-    <table class="totals-table">
-        <tr>
-            <td style="width: 44%; vertical-align: top; padding-right: 4px;">
-                <div style="background-color: #FAF6EE; border: 1px solid #D6C7B8; padding: 5px; border-radius: 3px; font-size: 7.8pt; line-height: 1.4;">
-                    <b style="color: #5C1D24;">ચુકવણી પદ્ધતિ (Payment Mode):</b> {mode_display}<br>
-                    <b>GST વિગત:</b> CGST (1.5%) + SGST (1.5%) = 3% GST<br>
-                    <b>નોંધ:</b> અધિકૃત કોમ્પ્યુટરાઈઝ્ડ એકાઉન્ટિંગ જી.એસ.ટી. બિલ
-                </div>
-            </td>
-            <td style="width: 56%; vertical-align: top;">
-                <table style="width: 100%; border-collapse: collapse;">
+    <!-- 5. Itemized Table (Exact 10 columns matching authentic jewelry tax invoice) -->
+    <tr>
+        <td colspan="3" style="padding: 0;">
+            <table class="items-table">
+                <thead>
                     <tr>
-                        <td style="border: 1px solid #D6C7B8; background: #FFFFFF; padding: 2px 5px; font-size: 7.8pt;">માલ રકમ (Subtotal):</td>
-                        <td style="border: 1px solid #D6C7B8; text-align: right; font-weight: bold; padding: 2px 5px; font-size: 7.8pt;">{format_inr(subtotal_rs)}</td>
+                        <th style="width: 4%;">SNo</th>
+                        <th style="width: 27%; text-align: left; padding-left: 4px;">Product Description</th>
+                        <th style="width: 8%;">HSN Code</th>
+                        <th style="width: 5%;">Pcs</th>
+                        <th style="width: 8%; text-align: right; padding-right: 3px;">Gr Wt.</th>
+                        <th style="width: 8%; text-align: right; padding-right: 3px;">Net Wt</th>
+                        <th style="width: 11%; text-align: right; padding-right: 3px;">Rate</th>
+                        <th style="width: 12%; text-align: right; padding-right: 3px;">Amount</th>
+                        <th style="width: 9%; text-align: right; padding-right: 3px;">Labour</th>
+                        <th style="width: 13%; text-align: right; padding-right: 3px;">Taxable Value</th>
                     </tr>
-                    <tr>
-                        <td style="border: 1px solid #D6C7B8; background: #FFFFFF; padding: 2px 5px; font-size: 7.8pt;">CGST @ 1.5%:</td>
-                        <td style="border: 1px solid #D6C7B8; text-align: right; padding: 2px 5px; font-size: 7.8pt;">{format_inr(cgst_rs)}</td>
+                </thead>
+                <tbody>
+                    {items_html}
+                    <!-- Totals Row -->
+                    <tr class="totals-row">
+                        <td colspan="3" style="text-align: center; border-right: 1px solid #5C1D24;">&nbsp;</td>
+                        <td style="text-align: center; border-right: 1px solid #5C1D24;">{tot_pcs}</td>
+                        <td style="text-align: right; border-right: 1px solid #5C1D24;">{tot_gr_wt:.3f}</td>
+                        <td style="text-align: right; border-right: 1px solid #5C1D24;">{tot_net_wt:.3f}</td>
+                        <td style="border-right: 1px solid #5C1D24;">&nbsp;</td>
+                        <td style="text-align: right; border-right: 1px solid #5C1D24;">{tot_amt:,.2f}</td>
+                        <td style="text-align: right; border-right: 1px solid #5C1D24;">{tot_labour:,.2f}</td>
+                        <td style="text-align: right; color: #5C1D24;">{tot_taxable:,.2f}</td>
                     </tr>
-                    <tr>
-                        <td style="border: 1px solid #D6C7B8; background: #FFFFFF; padding: 2px 5px; font-size: 7.8pt;">SGST @ 1.5%:</td>
-                        <td style="border: 1px solid #D6C7B8; text-align: right; padding: 2px 5px; font-size: 7.8pt;">{format_inr(sgst_rs)}</td>
-                    </tr>
-                    <tr class="grand-box">
-                        <td style="border: 1.5px solid #5C1D24; padding: 3px 5px;">GRAND TOTAL (કુલ પાકું બિલ):</td>
-                        <td style="border: 1.5px solid #5C1D24; text-align: right; padding: 3px 5px;">{format_inr(grand_rs)}</td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid #D6C7B8; font-weight: bold; color: #16A34A; padding: 2px 5px; font-size: 7.8pt;">જમા આપ્યા (Paid Amount):</td>
-                        <td style="border: 1px solid #D6C7B8; text-align: right; font-weight: bold; color: #16A34A; padding: 2px 5px; font-size: 7.8pt;">{format_inr(paid_rs)}</td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid #D6C7B8; font-weight: bold; color: {balance_color}; padding: 2px 5px; font-size: 7.8pt;">{balance_status}:</td>
-                        <td style="border: 1px solid #D6C7B8; text-align: right; font-weight: bold; color: {balance_color}; padding: 2px 5px; font-size: 7.8pt;">{format_inr(balance_rs)}</td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
+                </tbody>
+            </table>
+        </td>
+    </tr>
 
-    <!-- 7. Guarantee Terms & Conditions -->
-    <div class="terms">
-        <b>ગેરંટી શરતો :</b> અમારે ત્યાંથી લીધેલો દાગીનો પાછો લાવશો ત્યારે વજન અને ઝારણ/મજૂરી નિયમ મુજબ કાપી બજાર ભાવે પાછો લેવામાં આવશે. ઉચક આપેલો માલ પાછો લેવામાં આવશે નહીં.<br>
-        <b>નોંધ :</b> આપના જૂના સોના-ચાંદીના દાગીનામાંથી નવા આકર્ષક હોલમાર્ક દાગીના બનાવી આપવામાં આવશે.
-    </div>
+    <!-- 6. Bottom Summary Section -->
+    <tr>
+        <td colspan="3" style="padding: 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <!-- Left Summary Column -->
+                    <td style="width: 58%; vertical-align: top; padding: 3px 5px; border-right: 1px solid #5C1D24;">
+                        <div style="font-size: 7.2pt;"><b>Vch Desc :</b> {vch_desc}</div>
+                        <div style="font-weight: bold; font-size: 7.5pt; color: #5C1D24; margin: 3px 0 2px 0; border: 1px dashed #D6C7B8; padding: 2.5px 4px; background-color: #FCFAF6;">
+                            {words_inr}
+                        </div>
+                        <div style="font-size: 7pt; color: #555555; margin-top: 1px;"><b>Ref By :</b> </div>
+                        
+                        <div style="margin-top: 3px; font-size: 6.5pt; line-height: 1.2; color: #444444; border-top: 1px solid #E5D7CD; padding-top: 2px;">
+                            <b style="color: #2C1810;">Terms &amp; conditions :</b><br>
+                            <b>Subject to bavla jurisdiction</b><br>
+                            ગેરંટી શરતો : અમારે ત્યાંથી લીધેલો દાગીનો પાછો લાવશો ત્યારે વજન અને ઝારણ/મજૂરી નિયમ મુજબ કાપી બજાર ભાવે પાછો લેવામાં આવશે. ઉચક આપેલો માલ પાછો લેવામાં આવશે નહીં.
+                        </div>
 
-    <!-- 8. Dual Signatures -->
-    <table class="sig-table">
-        <tr>
-            <td style="width: 50%; vertical-align: bottom;">
-                ____________________________<br>
-                ગ્રાહકની સહી (Customer Signature)
-            </td>
-            <td style="width: 50%; text-align: right; vertical-align: bottom;">
-                ફોર, <b>{shop_settings['shop_name_gu']}</b><br><br>
-                <small>ઓથોરાઇઝ્ડ સહી (Authorized Signatory)</small>
-            </td>
-        </tr>
-    </table>
+                        <div style="margin-top: 10px; text-align: center; width: 60%;">
+                            <div style="font-size: 7.2pt; font-weight: bold; color: #2C1810; border-top: 1px solid #2C1810; padding-top: 2px;">
+                                Party signatory<br>
+                                <small style="font-weight: normal; color: #666666;">(ગ્રાહકની સહી)</small>
+                            </div>
+                        </div>
+                    </td>
 
-</td>
-</tr>
+                    <!-- Right Calculation & Auth Signatory Column -->
+                    <td style="width: 42%; vertical-align: top; padding: 0;">
+                        <table class="calc-table">
+                            <tr>
+                                <td style="width: 55%; background-color: #FFFFFF;">Net Amount :</td>
+                                <td style="width: 45%; text-align: right; font-weight: bold;">{format_inr(subtotal_rs, symbol='')}</td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #FFFFFF;">CGST : 1.50% :</td>
+                                <td style="text-align: right;">{format_inr(cgst_rs, symbol='')}</td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #FFFFFF;">SGST : 1.50% :</td>
+                                <td style="text-align: right;">{format_inr(sgst_rs, symbol='')}</td>
+                            </tr>
+                            <tr class="grand-row">
+                                <td style="border-top: 1.2px solid #5C1D24; border-bottom: 1.2px solid #5C1D24;">Total Amount :</td>
+                                <td style="border-top: 1.2px solid #5C1D24; border-bottom: 1.2px solid #5C1D24; text-align: right;">{format_inr(grand_rs, symbol='')}</td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #FFFFFF;">{paid_mode_label}</td>
+                                <td style="text-align: right; font-weight: bold; color: #16A34A;">{format_inr(paid_rs, symbol='')}</td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #FFFFFF; font-weight: bold; color: {outstanding_color};">Bill Outstanding :</td>
+                                <td style="text-align: right; font-weight: bold; color: {outstanding_color};">{format_inr(balance_rs, symbol='')}</td>
+                            </tr>
+                        </table>
+
+                        <div style="padding: 2px; text-align: center;">
+                            <div style="font-size: 6.5pt; color: #444444;">Certified that the particulars given above are true and correct</div>
+                            <div style="font-size: 7.5pt; font-weight: bold; color: #5C1D24; margin-top: 1px;">For : {shop_settings['shop_name_en']}</div>
+                            <div style="font-size: 7.5pt; font-weight: bold; color: #5C1D24;">{shop_settings['shop_name_gu']}</div>
+                            
+                            <div style="margin-top: 10px; margin-left: 15px; margin-right: 15px; border-top: 1px solid #5C1D24; padding-top: 2px;">
+                                <span style="font-size: 7.2pt; font-weight: bold; color: #5C1D24;">પ્રોપ્રાયટર / Authorised signatory</span>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
 </table>
+
 </body>
 </html>
-"""
+    """
     return html
 
-def print_or_pdf_bill(bill_data: dict, parent_window=None, save_pdf_path: str = None):
+def print_or_pdf_bill(bill_data: dict, parent_window=None, save_pdf_path: str = None) -> bool:
     """
     Renders the bill and opens print dialog or exports to PDF at true 1-page A4 proportions.
     """
@@ -378,7 +534,7 @@ def print_or_pdf_bill(bill_data: dict, parent_window=None, save_pdf_path: str = 
     
     printer = QPrinter(QPrinter.PrinterResolution)
     printer.setPageSize(QPageSize(QPageSize.A4))
-    printer.setPageMargins(QMarginsF(6, 6, 6, 6), QPageLayout.Millimeter)
+    printer.setPageMargins(QMarginsF(4, 4, 4, 4), QPageLayout.Millimeter)
 
     if save_pdf_path:
         dirname = os.path.dirname(save_pdf_path)
@@ -414,7 +570,7 @@ def export_bill_to_pdf(bill_data: dict, output_path: str) -> bool:
         printer = QPrinter(QPrinter.PrinterResolution)
         printer.setOutputFormat(QPrinter.PdfFormat)
         printer.setPageSize(QPageSize(QPageSize.A4))
-        printer.setPageMargins(QMarginsF(6, 6, 6, 6), QPageLayout.Millimeter)
+        printer.setPageMargins(QMarginsF(4, 4, 4, 4), QPageLayout.Millimeter)
         printer.setOutputFileName(output_path)
 
         paint_rect = printer.pageLayout().paintRectPixels(printer.resolution())

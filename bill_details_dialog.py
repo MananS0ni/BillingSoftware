@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from translations import t
-from database import get_bill_full_details
+from database import get_bill_full_details, get_customer_balance
 from print_manager import print_or_pdf_bill
 
 class BillDetailsDialog(QDialog):
@@ -153,13 +153,23 @@ class BillDetailsDialog(QDialog):
         layout.addLayout(btn_bar)
 
     def reprint_bill(self):
+        cust_id = self.bill_data.get("customer_id")
+        closing_bal = get_customer_balance(cust_id) if cust_id else 0
+        due = self.bill_data.get("balance_paise", 0)
+        opening_bal = closing_bal - due
+
         bill_dict_for_print = {
             "bill_no": self.bill_data["bill_no"],
             "book_no": self.bill_data.get("book_no", 1),
             "bill_date": self.bill_data["bill_date"],
             "customer_name": self.bill_data["name_gu"],
+            "name_gu": self.bill_data["name_gu"],
+            "name_en": self.bill_data.get("name_en", ""),
             "customer_mobile": self.bill_data["mobile"],
             "customer_address": self.bill_data["address"],
+            "gstin": self.bill_data.get("gstin", ""),
+            "pan_no": self.bill_data.get("pan_no", ""),
+            "aadhaar_no": self.bill_data.get("aadhaar_no", ""),
             "items": self.bill_data["items"],
             "subtotal_paise": self.bill_data["subtotal_paise"],
             "cgst_paise": self.bill_data["cgst_paise"],
@@ -167,7 +177,10 @@ class BillDetailsDialog(QDialog):
             "grand_total_paise": self.bill_data["grand_total_paise"],
             "paid_paise": self.bill_data["paid_paise"],
             "balance_paise": self.bill_data["balance_paise"],
-            "payment_mode": self.bill_data["payment_mode"]
+            "payment_mode": self.bill_data["payment_mode"],
+            "payment_ref": self.bill_data.get("payment_ref", ""),
+            "opening_balance_paise": opening_bal,
+            "closing_balance_paise": closing_bal
         }
         print_or_pdf_bill(bill_dict_for_print, self)
 

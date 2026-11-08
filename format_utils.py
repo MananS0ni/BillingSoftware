@@ -42,3 +42,64 @@ def format_inr(val, is_paise: bool = False, symbol: str = "₹ ") -> str:
     result = f"{symbol}{formatted_int}.{dec_p}"
     return f"-{result}" if is_negative else result
 
+
+def num_to_words_inr(num: float) -> str:
+    """
+    Converts a numerical amount into Indian currency words in English uppercase.
+    Example:
+        58360 -> 'RUPEES : FIFTY-EIGHT THOUSAND THREE HUNDRED SIXTY ONLY'
+    """
+    ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE',
+            'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN',
+            'SEVENTEEN', 'EIGHTEEN', 'NINETEEN']
+    tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY']
+    
+    def two_digits(n):
+        if n < 20:
+            return ones[n]
+        rem = n % 10
+        return (tens[n // 10] + ('-' + ones[rem] if rem else '')).strip()
+    
+    def three_digits(n):
+        h = n // 100
+        rem = n % 100
+        res = ''
+        if h:
+            res += ones[h] + ' HUNDRED'
+        if rem:
+            res += (' ' if res else '') + two_digits(rem)
+        return res
+
+    def convert_below_crore(n):
+        sub_parts = []
+        lakh = n // 100000
+        n %= 100000
+        thousand = n // 1000
+        n %= 1000
+        hundreds = n
+        
+        if lakh:
+            sub_parts.append(two_digits(lakh) + ' LAKH')
+        if thousand:
+            sub_parts.append(two_digits(thousand) + ' THOUSAND')
+        if hundreds:
+            sub_parts.append(three_digits(hundreds))
+        return ' '.join(p for p in sub_parts if p)
+
+    n = int(round(num))
+    if n <= 0:
+        return 'RUPEES : ZERO ONLY'
+    
+    parts = []
+    crore = n // 10000000
+    rem_crore = n % 10000000
+    
+    if crore:
+        parts.append(convert_below_crore(crore) + ' CRORE')
+    if rem_crore:
+        rem_str = convert_below_crore(rem_crore)
+        if rem_str:
+            parts.append(rem_str)
+        
+    return 'RUPEES : ' + ' '.join(parts) + ' ONLY'
+

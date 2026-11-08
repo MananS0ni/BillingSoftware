@@ -15,7 +15,7 @@ import os
 import re
 
 from translations import t
-from database import search_customers, add_customer, create_bill, get_next_bill_number, get_customer_by_mobile
+from database import search_customers, add_customer, create_bill, get_next_bill_number, get_customer_by_mobile, get_customer_balance
 from print_manager import print_or_pdf_bill, export_bill_to_pdf
 from format_utils import format_inr
 from whatsapp_manager import send_bill_async, get_whatsapp_status
@@ -668,6 +668,10 @@ class BillingView(QWidget):
         grand = subtotal + cgst + sgst
         due = max(0, grand - paid_paise)
 
+        closing_bal = get_customer_balance(cust_id)
+        opening_bal = closing_bal - due
+        cust_gstin_val = self.selected_customer.get("gstin", "") if self.selected_customer else ""
+
         bill_data = {
             "bill_no": get_next_bill_number() - 1,
             "book_no": 1,
@@ -675,6 +679,7 @@ class BillingView(QWidget):
             "customer_name": cust_name,
             "customer_mobile": cust_phone,
             "customer_address": self.txt_cust_address.text().strip(),
+            "gstin": cust_gstin_val,
             "pan_no": pan_val,
             "aadhaar_no": aadhaar_val,
             "items": self.items_data,
@@ -685,7 +690,9 @@ class BillingView(QWidget):
             "paid_paise": paid_paise,
             "balance_paise": due,
             "payment_mode": mode,
-            "payment_ref": ref_val
+            "payment_ref": ref_val,
+            "opening_balance_paise": opening_bal,
+            "closing_balance_paise": closing_bal
         }
 
         # 1. Automatically export PDF to dedicated invoices folder
