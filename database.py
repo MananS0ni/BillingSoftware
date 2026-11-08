@@ -166,6 +166,18 @@ def get_customer_by_id(customer_id: int) -> Optional[Dict]:
     conn.close()
     return dict(row) if row else None
 
+def get_customer_by_mobile(mobile: str) -> Optional[Dict]:
+    """Returns customer record only if the mobile number matches strictly and exactly."""
+    clean_mob = mobile.strip()
+    if not clean_mob:
+        return None
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM customers WHERE mobile = ? ORDER BY id DESC LIMIT 1;", (clean_mob,))
+    row = c.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
 # ----------------- Balance Calculation -----------------
 
 def get_customer_balance(customer_id: int) -> int:

@@ -15,7 +15,7 @@ import os
 import re
 
 from translations import t
-from database import search_customers, add_customer, create_bill, get_next_bill_number
+from database import search_customers, add_customer, create_bill, get_next_bill_number, get_customer_by_mobile
 from print_manager import print_or_pdf_bill, export_bill_to_pdf
 from format_utils import format_inr
 from whatsapp_manager import send_bill_async, get_whatsapp_status
@@ -392,14 +392,24 @@ class BillingView(QWidget):
             self.txt_paid.selectAll()
 
     def on_cust_phone_enter(self):
-        if self.txt_cust_name.text().strip():
-            # Customer already identified from phone search -> jump directly to first item!
-            self.txt_item_desc.setFocus()
-            self.txt_item_desc.selectAll()
-        else:
-            # New customer -> jump to name input
-            self.txt_cust_name.setFocus()
-            self.txt_cust_name.selectAll()
+        phone = self.txt_cust_phone.text().strip()
+        if len(phone) == 10 and phone.isdigit():
+            c = get_customer_by_mobile(phone)
+            if c:
+                self.selected_customer = c
+                self.txt_cust_name.setText(c["name_gu"])
+                self.txt_cust_address.setText(c["address"] or "")
+                self.txt_cust_pan.setText(c.get("pan_no", "") or "")
+                self.txt_cust_aadhaar.setText(c.get("aadhaar_no", "") or "")
+                # Customer already identified -> jump directly to first item!
+                self.txt_item_desc.setFocus()
+                self.txt_item_desc.selectAll()
+                return
+
+        # New customer or incomplete number -> reset and move to name input
+        self.selected_customer = None
+        self.txt_cust_name.setFocus()
+        self.txt_cust_name.selectAll()
 
     def on_paid_enter(self):
         mode = self.cmb_mode.currentText()
@@ -450,15 +460,33 @@ class BillingView(QWidget):
         self.update_totals_display()
 
     def on_phone_changed(self, text):
-        if len(text.strip()) >= 4:
-            results = search_customers(text)
-            if results:
-                c = results[0]
+        phone = text.strip()
+        # Strictly only trigger exact matching when full 10 digits are entered
+        if len(phone) == 10 and phone.isdigit():
+            c = get_customer_by_mobile(phone)
+            if c:
                 self.selected_customer = c
                 self.txt_cust_name.setText(c["name_gu"])
                 self.txt_cust_address.setText(c["address"] or "")
                 self.txt_cust_pan.setText(c.get("pan_no", "") or "")
                 self.txt_cust_aadhaar.setText(c.get("aadhaar_no", "") or "")
+            else:
+                # 10 digits entered, but no existing customer found in database
+                # Safely clear old selection so this is treated as a fresh new customer
+                if self.selected_customer:
+                    self.selected_customer = None
+                    self.txt_cust_name.clear()
+                    self.txt_cust_address.clear()
+                    self.txt_cust_pan.clear()
+                    self.txt_cust_aadhaar.clear()
+        else:
+            # When typing or backspacing (less than 10 digits), never lock onto an old customer
+            if self.selected_customer:
+                self.selected_customer = None
+                self.txt_cust_name.clear()
+                self.txt_cust_address.clear()
+                self.txt_cust_pan.clear()
+                self.txt_cust_aadhaar.clear()
 
     def on_payment_mode_changed(self, mode_text):
         mode = mode_text.upper()
@@ -594,12 +622,21 @@ class BillingView(QWidget):
         aadhaar_val = self.txt_cust_aadhaar.text().strip()
         ref_val = self.txt_payment_ref.text().strip()
 
+        # Safety Check: Verify that selected_customer matches the entered 10-digit mobile number
+        if self.selected_customer and self.selected_customer.get("mobile") != cust_phone:
+            self.selected_customer = None
+
         if not self.selected_customer:
-            cust_id = add_customer(
-                name_gu=cust_name, mobile=cust_phone,
-                address=self.txt_cust_address.text().strip(),
-                pan_no=pan_val, aadhaar_no=aadhaar_val
-            )
+            # Check if an exact customer already exists with this exact 10-digit mobile
+            existing_c = get_customer_by_mobile(cust_phone)
+            if existing_c:
+                cust_id = existing_c["id"]
+            else:
+                cust_id = add_customer(
+                    name_gu=cust_name, mobile=cust_phone,
+                    address=self.txt_cust_address.text().strip(),
+                    pan_no=pan_val, aadhaar_no=aadhaar_val
+                )
         else:
             cust_id = self.selected_customer["id"]
 
