@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.spec
+dist/
+build/
+
+# Local databases and backups (protects shop financial data)
+*.db
+*.db-journal
+*.db-wal
+backup/
+*.backup
+
+# Invoices and temp renders
+invoices/*.pdf
+*.png
+*.pdf
+
+# WhatsApp Baileys Authentication & Session Keys (CRITICAL: Never commit auth tokens)
+bridge/auth_info/
+bridge/*auth*
+bridge/baileys_auth_info/
+bridge/node_modules/
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
