@@ -334,10 +334,11 @@ def get_bill_full_details(bill_id: int) -> Optional[Dict]:
 
 def create_bill(customer_id: int, bill_date: str, items: List[Dict], paid_paise: int,
                 payment_mode: str = "CASH", payment_ref: str = "",
-                apply_gst: bool = True) -> int:
+                apply_gst: bool = True, custom_bill_no: Optional[int] = None) -> int:
     """
     Creates a bill atomically inside a single transaction.
     apply_gst=False means 0% GST — no CGST/SGST rows in ledger or database.
+    custom_bill_no: Optional manual/paper bill number for Khatabook backdated entries.
     Returns bill_id on success, raises on any failure (caller must handle).
     """
     conn = get_connection()
@@ -353,7 +354,11 @@ def create_bill(customer_id: int, bill_date: str, items: List[Dict], paid_paise:
             sgst_paise = 0
         grand_total_paise = subtotal_paise + cgst_paise + sgst_paise
         balance_paise = max(0, grand_total_paise - paid_paise)
-        bill_no = get_next_bill_number()
+        
+        if custom_bill_no and custom_bill_no > 0:
+            bill_no = custom_bill_no
+        else:
+            bill_no = get_next_bill_number()
 
         c.execute("""
             INSERT INTO bills (

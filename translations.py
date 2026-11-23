@@ -15,6 +15,7 @@ TRANSLATIONS = {
         # Navigation Menu (Sidebar)
         "nav_dashboard": "ડેશબોર્ડ (Dashboard)",
         "nav_new_bill": "નવું બિલ બનાવો (New Bill)",
+        "nav_khatabook": "ખાતાવહી બિલિંગ (Khatabook)",
         "nav_purchases": "માલ ખરીદી (Purchases)",
         "nav_customers": "ગ્રાહકો (Customers)",
         "nav_ledger": "જમા / ઉધાર (Ledger)",
@@ -122,6 +123,15 @@ TRANSLATIONS = {
         "lbl_pay_mode_modal": "ચૂકવણીનો પ્રકાર (Mode):",
         "lbl_pay_remark": "નોંધ / રીમાર્ક:",
         
+        # Khatabook & Backdated Billing (GUJARATI)
+        "khatabook_title": "ખાતાવહી બિલિંગ & જૂના બિલ એન્ટ્રી (Khatabook)",
+        "khatabook_subtitle": "જૂની તારીખ, જૂના બિલ નંબર અને પાછલા વ્યવહારોની સરળ એન્ટ્રી",
+        "lbl_bill_date": "બિલ તારીખ (Bill Date):",
+        "lbl_custom_bill_no": "બિલ નં. (Bill No.):",
+        "btn_save_khatabook": "💾 ખાતામાં સેવ કરો (Save to Khatabook)",
+        "btn_save_khatabook_print": "🖨️ સેવ અને પ્રિન્ટ (Save & Print)",
+        "msg_khatabook_saved": "ખાતાવહીમાં બિલ સફળતાપૂર્વક સેવ થઈ ગયું છે!",
+
         # Purchases (Inward Wholesale & URD Customer Old Gold)
         "purchases_title": "જ્વેલરી માલ ખરીદી ચોપડો (Wholesale Purchases)",
         "btn_add_purchase": "+ નવી ખરીદી નોંધો",
@@ -321,6 +331,7 @@ TRANSLATIONS = {
         # Navigation Menu (Sidebar)
         "nav_dashboard": "Dashboard",
         "nav_new_bill": "Create New Bill",
+        "nav_khatabook": "Khatabook",
         "nav_purchases": "Purchases (Inward)",
         "nav_customers": "Customers",
         "nav_ledger": "Credit / Debit Ledger",
@@ -428,6 +439,15 @@ TRANSLATIONS = {
         "lbl_pay_mode_modal": "Payment Mode:",
         "lbl_pay_remark": "Remark / Notes:",
         
+        # Khatabook & Backdated Billing (ENGLISH)
+        "khatabook_title": "Khatabook & Backdated Billing Entry",
+        "khatabook_subtitle": "Record offline bills with custom past dates, bill numbers & items",
+        "lbl_bill_date": "Bill Date:",
+        "lbl_custom_bill_no": "Bill No.:",
+        "btn_save_khatabook": "💾 Save to Khatabook",
+        "btn_save_khatabook_print": "🖨️ Save & Print",
+        "msg_khatabook_saved": "Bill saved to Khatabook successfully!",
+
         # Purchases (Inward Wholesale & URD Customer Old Gold)
         "purchases_title": "Wholesale Purchases & Inward Register",
         "btn_add_purchase": "+ Add Purchase Entry",
