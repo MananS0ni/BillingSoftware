@@ -164,6 +164,43 @@ def add_customer(name_gu: str, mobile: str, address: str = "", name_en: str = ""
     conn.close()
     return cust_id
 
+def update_customer(customer_id: int, name_gu: str = None, mobile: str = None, address: str = None, 
+                    name_en: str = None, gstin: str = None, pan_no: str = None, aadhaar_no: str = None) -> bool:
+    """Updates an existing customer's contact and identity details (Bug 10 fix)."""
+    conn = get_connection()
+    c = conn.cursor()
+    updates = []
+    params = []
+    if name_gu is not None and name_gu.strip():
+        updates.append("name_gu = ?")
+        params.append(name_gu.strip())
+    if name_en is not None:
+        updates.append("name_en = ?")
+        params.append(name_en.strip())
+    if mobile is not None and mobile.strip():
+        updates.append("mobile = ?")
+        params.append(mobile.strip())
+    if address is not None:
+        updates.append("address = ?")
+        params.append(address.strip())
+    if gstin is not None:
+        updates.append("gstin = ?")
+        params.append(gstin.strip().upper())
+    if pan_no is not None:
+        updates.append("pan_no = ?")
+        params.append(pan_no.strip().upper())
+    if aadhaar_no is not None:
+        updates.append("aadhaar_no = ?")
+        params.append(aadhaar_no.strip())
+    if not updates:
+        conn.close()
+        return False
+    params.append(customer_id)
+    c.execute(f"UPDATE customers SET {', '.join(updates)} WHERE id = ?;", params)
+    conn.commit()
+    conn.close()
+    return True
+
 def get_all_customers() -> List[Dict]:
     """Returns all customers sorted alphabetically for selection dropdowns."""
     conn = get_connection()
@@ -403,11 +440,24 @@ def get_dashboard_metrics() -> Dict:
     """)
     recent_bills = [dict(r) for r in c.fetchall()]
 
-    # 5. GST Analytics (Sales Output GST vs Purchase Input Tax Credit)
-    c.execute("SELECT COALESCE(SUM(cgst_paise + sgst_paise), 0) FROM bills WHERE status = 'ACTIVE';")
+    # 5. Monthly GST Analytics (Sales Output GST vs Registered Wholesale Dealer ITC)
+    # Bug 16 fix:
+    # 1) GST is filed monthly, so calculate for current month (YYYY-MM).
+    # 2) Only purchases from registered wholesale DEALERs are eligible for Input Tax Credit (ITC).
+    #    Customer URD (old gold buyback) purchases are NOT counted as dealer ITC.
+    current_month_prefix = datetime.now().strftime("%Y-%m")
+    c.execute("""
+        SELECT COALESCE(SUM(cgst_paise + sgst_paise), 0) 
+        FROM bills 
+        WHERE status = 'ACTIVE' AND bill_date LIKE ?;
+    """, (f"{current_month_prefix}%",))
     output_gst_paise = c.fetchone()[0]
 
-    c.execute("SELECT COALESCE(SUM(gst_paise), 0) FROM purchases;")
+    c.execute("""
+        SELECT COALESCE(SUM(gst_paise), 0) 
+        FROM purchases 
+        WHERE purchase_type = 'DEALER' AND purchase_date LIKE ?;
+    """, (f"{current_month_prefix}%",))
     input_gst_paise = c.fetchone()[0]
 
     net_gst_paise = output_gst_paise - input_gst_paise

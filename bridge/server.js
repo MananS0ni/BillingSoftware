@@ -18,6 +18,21 @@ app.use(express.json());
 
 const PORT = 5001;
 const AUTH_DIR = path.join(__dirname, 'auth_info');
+// Bug 18 fix: Shared local authentication secret and directory whitelisting
+const BRIDGE_AUTH_TOKEN = 'NH_BRIDGE_SECURE_TOKEN_2026';
+const ALLOWED_PROJECT_DIR = path.resolve(__dirname, '..');
+
+// Security middleware: Require authentic desktop token on all bridge requests
+function requireAuth(req, res, next) {
+    const token = req.headers['x-bridge-token'] || req.body?.token;
+    if (token !== BRIDGE_AUTH_TOKEN) {
+        return res.status(401).json({ 
+            success: false, 
+            error: 'Security: Unauthorized. Missing or invalid bridge authentication token.' 
+        });
+    }
+    next();
+}
 
 let sock = null;
 let connectionStatus = 'connecting';
@@ -103,8 +118,8 @@ app.get('/status', (req, res) => {
     });
 });
 
-// 2. Send Bill Endpoint
-app.post('/send-bill', async (req, res) => {
+// 2. Send Bill Endpoint (Bug 18 fix: Protected by token and path whitelist)
+app.post('/send-bill', requireAuth, async (req, res) => {
     try {
         if (connectionStatus !== 'connected' || !sock) {
             return res.status(503).json({
@@ -127,10 +142,29 @@ app.post('/send-bill', async (req, res) => {
 
         let sentMessage = null;
 
-        // If PDF path is provided and exists, send the document with caption
-        if (pdfPath && fs.existsSync(pdfPath)) {
-            const buffer = fs.readFileSync(pdfPath);
-            const fileName = path.basename(pdfPath);
+        // Bug 18 fix: Restrict pdfPath to .pdf files strictly inside the application workspace
+        if (pdfPath) {
+            const resolvedPath = path.resolve(pdfPath);
+            if (!resolvedPath.toLowerCase().endsWith('.pdf')) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Security: Only .pdf files are permitted to be transmitted.' 
+                });
+            }
+            if (!resolvedPath.toLowerCase().startsWith(ALLOWED_PROJECT_DIR.toLowerCase())) {
+                return res.status(403).json({ 
+                    success: false, 
+                    error: 'Security: Access denied. File path is outside allowed application workspace.' 
+                });
+            }
+            if (!fs.existsSync(resolvedPath)) {
+                return res.status(404).json({ 
+                    success: false, 
+                    error: 'PDF file not found at specified path.' 
+                });
+            }
+            const buffer = fs.readFileSync(resolvedPath);
+            const fileName = path.basename(resolvedPath);
             sentMessage = await sock.sendMessage(jid, {
                 document: buffer,
                 mimetype: 'application/pdf',
@@ -158,7 +192,7 @@ app.post('/send-bill', async (req, res) => {
 });
 
 // 3. Logout Endpoint
-app.post('/logout', async (req, res) => {
+app.post('/logout', requireAuth, async (req, res) => {
     try {
         if (sock) {
             await sock.logout();
@@ -177,7 +211,7 @@ app.post('/logout', async (req, res) => {
 });
 
 // 4. Pairing Code Endpoint (Camera-less linking via 8-digit phone code)
-app.post('/request-pairing-code', async (req, res) => {
+app.post('/request-pairing-code', requireAuth, async (req, res) => {
     try {
         if (connectionStatus === 'connected') {
             return res.json({

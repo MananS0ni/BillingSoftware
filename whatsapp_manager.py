@@ -19,6 +19,16 @@ SEND_URL = "http://127.0.0.1:5001/send-bill"
 LOGOUT_URL = "http://127.0.0.1:5001/logout"
 PAIRING_URL = "http://127.0.0.1:5001/request-pairing-code"
 
+# Bug 18 fix: Shared secret token for secure local bridge communication
+BRIDGE_AUTH_TOKEN = "NH_BRIDGE_SECURE_TOKEN_2026"
+
+def _get_bridge_headers():
+    return {
+        "Content-Type": "application/json",
+        "User-Agent": "JewelryApp",
+        "X-Bridge-Token": BRIDGE_AUTH_TOKEN
+    }
+
 bridge_process = None
 
 def stop_bridge():
@@ -42,7 +52,7 @@ def stop_bridge():
 def is_bridge_running() -> bool:
     """Checks if the local WhatsApp bridge HTTP service is answering."""
     try:
-        req = urllib.request.Request(STATUS_URL, headers={"User-Agent": "JewelryApp"})
+        req = urllib.request.Request(STATUS_URL, headers=_get_bridge_headers())
         with urllib.request.urlopen(req, timeout=1.5) as resp:
             return resp.status == 200
     except Exception:
@@ -88,7 +98,7 @@ def ensure_bridge_running():
 def get_whatsapp_status() -> dict:
     """Returns { status: 'connected'|'qr_ready'|'connecting'|'disconnected'|'offline', qr: 'data:...', user: {...} }"""
     try:
-        req = urllib.request.Request(STATUS_URL, headers={"User-Agent": "JewelryApp"})
+        req = urllib.request.Request(STATUS_URL, headers=_get_bridge_headers())
         with urllib.request.urlopen(req, timeout=2.0) as resp:
             if resp.status == 200:
                 return json.loads(resp.read().decode("utf-8"))
@@ -112,7 +122,7 @@ def send_bill_sync(phone: str, message: str = "", pdf_path: str = None) -> dict:
         req = urllib.request.Request(
             SEND_URL,
             data=data,
-            headers={"Content-Type": "application/json", "User-Agent": "JewelryApp"}
+            headers=_get_bridge_headers()
         )
         with urllib.request.urlopen(req, timeout=15.0) as resp:
             return json.loads(resp.read().decode("utf-8"))
@@ -148,7 +158,7 @@ def logout_whatsapp() -> bool:
         req = urllib.request.Request(
             LOGOUT_URL,
             data=b"{}",
-            headers={"Content-Type": "application/json", "User-Agent": "JewelryApp"}
+            headers=_get_bridge_headers()
         )
         with urllib.request.urlopen(req, timeout=5.0) as resp:
             return resp.status == 200
@@ -171,7 +181,7 @@ def request_pairing_code(phone: str) -> dict:
         req = urllib.request.Request(
             PAIRING_URL,
             data=data,
-            headers={"Content-Type": "application/json", "User-Agent": "JewelryApp"}
+            headers=_get_bridge_headers()
         )
         with urllib.request.urlopen(req, timeout=12.0) as resp:
             return json.loads(resp.read().decode("utf-8"))

@@ -15,7 +15,10 @@ import os
 import re
 
 from translations import t
-from database import search_customers, add_customer, create_bill, get_next_bill_number, get_customer_by_mobile, get_customer_balance
+from database import (
+    search_customers, add_customer, update_customer, create_bill, 
+    get_next_bill_number, get_customer_by_mobile, get_customer_balance
+)
 from print_manager import print_or_pdf_bill, export_bill_to_pdf
 from format_utils import format_inr
 from whatsapp_manager import send_bill_async, get_whatsapp_status
@@ -537,6 +540,16 @@ class BillingView(QWidget):
             if rate > 0:
                 self.txt_rate.setText(str(rate))
                 self.calculate_row_amount()
+                # Bug 11 fix: Alert user if rate came from offline/stale cache
+                if not rm.is_live():
+                    QMessageBox.warning(
+                        self,
+                        "ઓફલાઇન ભાવ / Offline Rate",
+                        "⚠️ ઇન્ટરનેટ કનેક્શન ન હોવાથી છેલ્લો સેવ કરેલો ભાવ લેવામાં આવ્યો છે.\n"
+                        "કૃપા કરીને બિલ સેવ કરતા પહેલા ભાવ ચકાસી લો.\n\n"
+                        "(Applied offline/cached rate because live market is unreachable.\n"
+                        "Please verify the rate before billing.)"
+                    )
         except Exception:
             pass
 
@@ -713,20 +726,37 @@ class BillingView(QWidget):
         if self.selected_customer and self.selected_customer.get("mobile") != cust_phone:
             self.selected_customer = None
 
-        # Bug 5 fix: Resolve/create customer BEFORE the bill transaction begins
+        # Bug 5 & Bug 10 fix: Resolve/create/update customer BEFORE the bill transaction begins
         try:
+            addr_val = self.txt_cust_address.text().strip()
             if not self.selected_customer:
                 existing_c = get_customer_by_mobile(cust_phone)
                 if existing_c:
                     cust_id = existing_c["id"]
+                    # Bug 10 fix: Ensure DB customer record matches typed name/address/id
+                    update_customer(
+                        customer_id=cust_id,
+                        name_gu=cust_name if cust_name and cust_name != "Customer" else None,
+                        address=addr_val,
+                        pan_no=pan_val,
+                        aadhaar_no=aadhaar_val
+                    )
                 else:
                     cust_id = add_customer(
                         name_gu=cust_name, mobile=cust_phone,
-                        address=self.txt_cust_address.text().strip(),
+                        address=addr_val,
                         pan_no=pan_val, aadhaar_no=aadhaar_val
                     )
             else:
                 cust_id = self.selected_customer["id"]
+                # Bug 10 fix: If user edited the customer info while preparing bill, update DB
+                update_customer(
+                    customer_id=cust_id,
+                    name_gu=cust_name if cust_name and cust_name != "Customer" else None,
+                    address=addr_val,
+                    pan_no=pan_val,
+                    aadhaar_no=aadhaar_val
+                )
         except Exception as e:
             QMessageBox.critical(self, "Database Error", f"ગ્રાહક સેવ કરવામાં ભૂલ:\n{e}")
             return

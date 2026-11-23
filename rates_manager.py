@@ -66,9 +66,8 @@ class LiveRatesWorker(QThread):
         self.running = True
         self.last_gold_24k = 0.0
         self.last_silver = 0.0
+        # Bug 19 fix: Use standard verified TLS/SSL certificate context
         self.ssl_ctx = ssl.create_default_context()
-        self.ssl_ctx.check_hostname = False
-        self.ssl_ctx.verify_mode = ssl.CERT_NONE
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
@@ -161,7 +160,12 @@ class LiveRatesWorker(QThread):
 
             if gold_10g > 10000:
                 raw_g24 = gold_10g / 10.0
-                raw_sil = (silver_1kg / 1000.0) if silver_1kg > 1000 else 155.0
+                if silver_1kg > 1000:
+                    raw_sil = silver_1kg / 1000.0
+                else:
+                    # Bug 11 fix: Do not silently invent 155.0; use cached silver if available
+                    cached = get_cached_rates()
+                    raw_sil = float(cached.get("silver_lagdi_1g", 0.0)) if cached else 0.0
                 return self._build_rates_payload(raw_g24, raw_sil, source="AARAV_AHMEDABAD_LIVE")
 
         except Exception:
@@ -265,6 +269,10 @@ class RatesManager(QObject):
 
     def get_latest_rates(self) -> dict:
         return self.latest_rates
+
+    def is_live(self) -> bool:
+        """Bug 11 fix: True if rates are actively fetched from live market, False if offline/fallback."""
+        return self.latest_rates.get("status") == "LIVE"
 
     def get_rate_by_item(self, description: str, hsn_code: str = "") -> float:
         """

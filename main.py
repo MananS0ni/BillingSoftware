@@ -27,6 +27,7 @@ from whatsapp_dialog import WhatsAppDialog
 from whatsapp_manager import get_whatsapp_status, ensure_bridge_running, stop_bridge
 from rates_manager import get_rates_manager
 from rates_dialog import RatesDialog
+import threading as _threading  # Bug 13 fix: background WA status checks
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -44,14 +45,26 @@ class MainWindow(QMainWindow):
 
         self.init_ui()
 
-        ensure_bridge_running()
+        # Bug 13 fix: start bridge + initial WA status check in background thread
+        # so the main window opens instantly without freezing for 5 seconds
+        _threading.Thread(target=ensure_bridge_running, daemon=True).start()
         self.wa_timer = QTimer(self)
-        self.wa_timer.timeout.connect(self.update_wa_header_status)
+        self.wa_timer.timeout.connect(self._refresh_wa_status_async)
         self.wa_timer.start(4000)
-        self.update_wa_header_status()
+        # First status update after a short delay (let bridge start first)
+        QTimer.singleShot(2000, self._refresh_wa_status_async)
 
-    def update_wa_header_status(self):
-        data = get_whatsapp_status()
+    def _refresh_wa_status_async(self):
+        """Bug 13 fix: fetch WA status in a daemon thread, update UI safely via QTimer."""
+        def _worker():
+            data = get_whatsapp_status()
+            # Schedule UI update back on main thread
+            QTimer.singleShot(0, lambda: self.update_wa_header_status(data))
+        _threading.Thread(target=_worker, daemon=True).start()
+
+    def update_wa_header_status(self, data=None):
+        if data is None:
+            data = get_whatsapp_status()
         if data.get("status") == "connected":
             self.btn_wa.setText("🟢 WhatsApp")
             self.btn_wa.setStyleSheet("background-color: #14532D; color: #FFFFFF; border: 1.5px solid #22C55E; border-radius: 8px; padding: 6px 14px; font-weight: bold; font-size: 13px; margin-right: 14px;")

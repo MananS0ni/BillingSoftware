@@ -301,12 +301,18 @@ class AddURDPurchaseDialog(QDialog):
             rates = rm.get_latest_rates()
             desc = (self.txt_desc.text() or "").lower()
             if any(w in desc for w in ["silver", "ચાંદી", "chandi", "payal", "પાયલ"]):
-                base_rate = rates.get("silver_lagdi_1g", 92.0)
+                base_rate = rates.get("silver_lagdi_1g", 155.0)
             else:
-                base_rate = rates.get("gold_24k_1g", 7650.0)
+                base_rate = rates.get("gold_24k_1g", 12880.0)
             touch = float(self.txt_touch.text().strip() or 100.0)
             calc_rate = round(base_rate * (touch / 100.0), 2)
             self.txt_rate.setText(str(calc_rate))
+            if not rm.is_live():
+                QMessageBox.warning(
+                    self, "ઓફલાઇન ભાવ / Offline Rate",
+                    "⚠️ ઇન્ટરનેટ કનેક્શન ન હોવાથી સેવ કરેલો જૂનો ભાવ મુકાયો છે. કૃપા કરીને ચકાસો.\n"
+                    "(Applied cached/offline rate. Please verify.)"
+                )
         except Exception:
             pass
 
@@ -578,12 +584,18 @@ class AddPurchaseDialog(QDialog):
             desc = (self.txt_desc.text() or "").lower()
             rates = rm.get_latest_rates()
             if any(w in desc for w in ["silver", "ચાંદી", "chandi"]):
-                rate = rates.get("silver_lagdi_1g", 92.0)
+                rate = rates.get("silver_lagdi_1g", 155.0)
             elif any(w in desc for w in ["22k", "૨૨k", "916"]):
-                rate = rates.get("gold_22k_1g", 7013.0)
+                rate = rates.get("gold_22k_1g", 11807.0)
             else:
-                rate = rates.get("gold_24k_1g", 7650.0)
+                rate = rates.get("gold_24k_1g", 12880.0)
             self.txt_rate.setText(str(rate))
+            if not rm.is_live():
+                QMessageBox.warning(
+                    self, "ઓફલાઇન ભાવ / Offline Rate",
+                    "⚠️ ઇન્ટરનેટ કનેક્શન ન હોવાથી સેવ કરેલો જૂનો ભાવ મુકાયો છે. કૃપા કરીને ચકાસો.\n"
+                    "(Applied cached/offline rate. Please verify.)"
+                )
         except Exception:
             pass
 
