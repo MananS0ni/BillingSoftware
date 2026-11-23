@@ -285,6 +285,11 @@ TRANSLATIONS = {
         "btn_wa_not_connected": "📲 WhatsApp લિંક કરો",
         "msg_wa_sent": "બિલ WhatsApp પર મોકલાઈ ગયું છે!",
         "msg_wa_not_linked": "WhatsApp જોડાયેલ નથી, જેથી મેસેજ ગયો નથી.",
+        "btn_send_wa_bill": "📲 WhatsApp",
+        "msg_wa_sending": "WhatsApp પર બિલ મોકલી રહ્યા છે...",
+        "msg_wa_bill_sent": "✅ બિલ #{bill_no} WhatsApp પર મોકલાઈ ગયું!",
+        "msg_wa_bill_failed": "❌ WhatsApp પર મોકલવામાં ભૂલ: {error}",
+        "msg_wa_no_mobile": "આ બિલમાં ગ્રાહકનો મોબાઈલ નંબર નથી.",
         
         # Alerts & Messages
         "msg_saved_success": "સફળતાપૂર્વક સેવ થઈ ગયું!",
@@ -601,6 +606,11 @@ TRANSLATIONS = {
         "btn_wa_not_connected": "📲 Connect WhatsApp",
         "msg_wa_sent": "Bill sent on WhatsApp successfully!",
         "msg_wa_not_linked": "WhatsApp is not linked, message was not sent.",
+        "btn_send_wa_bill": "📲 WhatsApp",
+        "msg_wa_sending": "Sending bill on WhatsApp...",
+        "msg_wa_bill_sent": "✅ Bill #{bill_no} sent on WhatsApp!",
+        "msg_wa_bill_failed": "❌ WhatsApp send failed: {error}",
+        "msg_wa_no_mobile": "No mobile number found for this bill's customer.",
         
         # Alerts & Messages
         "msg_saved_success": "Saved successfully!",

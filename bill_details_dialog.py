@@ -7,10 +7,11 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
     QTableWidget, QTableWidgetItem, QHeaderView, QFrame, QGridLayout, QMessageBox
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from translations import t
 from database import get_bill_full_details, get_customer_balance
-from print_manager import print_or_pdf_bill
+from print_manager import print_or_pdf_bill, export_bill_to_pdf
+from whatsapp_manager import get_whatsapp_status, send_bill_async, ensure_bridge_running
 
 class BillDetailsDialog(QDialog):
     def __init__(self, bill_id: int, parent=None):
@@ -136,7 +137,7 @@ class BillDetailsDialog(QDialog):
 
         layout.addWidget(card_summary)
 
-        # Action Buttons (Reprint Bill / Close)
+        # Action Buttons (WhatsApp / Reprint Bill / Close)
         btn_bar = QHBoxLayout()
         btn_bar.addStretch()
 
@@ -145,6 +146,21 @@ class BillDetailsDialog(QDialog):
         btn_close.clicked.connect(self.accept)
         btn_bar.addWidget(btn_close)
 
+        btn_wa = QPushButton(t("btn_send_wa_bill"))
+        btn_wa.setObjectName("GoldActionBtn")
+        btn_wa.setStyleSheet("""
+            QPushButton {
+                background-color: #25D366; color: #FFFFFF;
+                font-weight: bold; font-size: 13px;
+                padding: 8px 18px; border-radius: 6px; border: none;
+            }
+            QPushButton:hover { background-color: #1DA851; }
+            QPushButton:disabled { background-color: #88C9A0; color: #D0D0D0; }
+        """)
+        btn_wa.clicked.connect(self.send_to_whatsapp)
+        btn_bar.addWidget(btn_wa)
+        self.btn_wa = btn_wa
+
         btn_reprint = QPushButton(t("btn_reprint_pdf"))
         btn_reprint.setObjectName("GoldActionBtn")
         btn_reprint.clicked.connect(self.reprint_bill)
@@ -152,13 +168,14 @@ class BillDetailsDialog(QDialog):
 
         layout.addLayout(btn_bar)
 
-    def reprint_bill(self):
+    def _build_bill_dict(self):
+        """Builds the standard bill dict used for both printing and WhatsApp export."""
         cust_id = self.bill_data.get("customer_id")
         closing_bal = get_customer_balance(cust_id) if cust_id else 0
         due = self.bill_data.get("balance_paise", 0)
         opening_bal = closing_bal - due
 
-        bill_dict_for_print = {
+        return {
             "bill_no": self.bill_data["bill_no"],
             "book_no": self.bill_data.get("book_no", 1),
             "bill_date": self.bill_data["bill_date"],
@@ -182,5 +199,107 @@ class BillDetailsDialog(QDialog):
             "opening_balance_paise": opening_bal,
             "closing_balance_paise": closing_bal
         }
+
+    def reprint_bill(self):
+        bill_dict_for_print = self._build_bill_dict()
         print_or_pdf_bill(bill_dict_for_print, self)
+
+    def send_to_whatsapp(self):
+        """Exports the bill as PDF and sends it to the customer's WhatsApp."""
+        import os
+
+        # 1. Validate mobile number
+        mobile = self.bill_data.get("mobile", "").strip()
+        if not mobile:
+            QMessageBox.warning(self, "WhatsApp", t("msg_wa_no_mobile"))
+            return
+
+        # 2. Check WhatsApp bridge status
+        status = get_whatsapp_status()
+        if status.get("status") != "connected":
+            QMessageBox.warning(self, "WhatsApp", t("msg_wa_not_linked"))
+            return
+
+        # 3. Confirmation dialog (Bug 15 fix pattern)
+        bill_no = self.bill_data["bill_no"]
+        grand = self.bill_data["grand_total_paise"] / 100.0
+        confirm = QMessageBox.question(
+            self, "WhatsApp",
+            f"Send Bill #{bill_no} (₹{grand:,.2f}) to {mobile} on WhatsApp?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes
+        )
+        if confirm != QMessageBox.Yes:
+            return
+
+        # 4. Disable button to prevent double-send
+        self.btn_wa.setEnabled(False)
+        self.btn_wa.setText(t("msg_wa_sending"))
+
+        # 5. Export PDF
+        invoices_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "invoices")
+        os.makedirs(invoices_dir, exist_ok=True)
+        safe_name = self.bill_data["name_gu"].replace(" ", "_")[:30]
+        pdf_filename = f"Bill_{bill_no}_{safe_name}.pdf"
+        pdf_path = os.path.join(invoices_dir, pdf_filename)
+
+        bill_dict = self._build_bill_dict()
+        if not export_bill_to_pdf(bill_dict, pdf_path):
+            QMessageBox.critical(self, "WhatsApp", "PDF export failed. Cannot send.")
+            self.btn_wa.setEnabled(True)
+            self.btn_wa.setText(t("btn_send_wa_bill"))
+            return
+
+        # 6. Build WhatsApp message
+        date_str = self.bill_data["bill_date"]
+        paid = self.bill_data["paid_paise"] / 100.0
+        due = self.bill_data["balance_paise"] / 100.0
+        cust_name = self.bill_data["name_gu"]
+
+        message = (
+            f"🏅 *સોની નટવરલાલ હિંમતલાલ*\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"📄 બિલ નં: *#{bill_no}*\n"
+            f"📅 તારીખ: {date_str}\n"
+            f"👤 ગ્રાહક: {cust_name}\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"💰 કુલ રકમ: *₹{grand:,.2f}*\n"
+            f"✅ ચૂકવેલ: ₹{paid:,.2f}\n"
+        )
+        if due > 0:
+            message += f"⏳ બાકી: *₹{due:,.2f}*\n"
+        message += (
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"📎 PDF બિલ સાથે જોડાયેલ છે.\n"
+            f"🙏 ધન્યવાद!"
+        )
+
+        # 7. Send async (non-blocking) with callback
+        def _on_result(result):
+            # QTimer.singleShot ensures UI updates happen on the main thread
+            if result.get("success"):
+                QTimer.singleShot(0, lambda: self._wa_send_success(bill_no))
+            else:
+                err = result.get("error", "Unknown error")
+                QTimer.singleShot(0, lambda: self._wa_send_failed(err))
+
+        ensure_bridge_running()
+        send_bill_async(mobile, message, pdf_path, callback=_on_result)
+
+    def _wa_send_success(self, bill_no):
+        """Called on main thread after successful WhatsApp send."""
+        self.btn_wa.setEnabled(True)
+        self.btn_wa.setText(t("btn_send_wa_bill"))
+        QMessageBox.information(
+            self, "WhatsApp",
+            t("msg_wa_bill_sent").replace("{bill_no}", str(bill_no))
+        )
+
+    def _wa_send_failed(self, error):
+        """Called on main thread after failed WhatsApp send."""
+        self.btn_wa.setEnabled(True)
+        self.btn_wa.setText(t("btn_send_wa_bill"))
+        QMessageBox.critical(
+            self, "WhatsApp",
+            t("msg_wa_bill_failed").replace("{error}", error)
+        )
 
