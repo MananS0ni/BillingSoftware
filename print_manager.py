@@ -380,3 +380,435 @@ def print_or_pdf_bill(bill_data: dict, parent_window=None, save_pdf_path: str = 
             pass
 
     return True
+
+# ----------------- URD Customer Purchase Voucher (Old Gold / Buyback) -----------------
+
+def generate_urd_voucher_html(urd_data: dict, shop_settings: dict = None, page_size: str = "A5") -> str:
+    """
+    Generates an official, compact single-page URD Purchase Voucher (Sec 31(3)(f)).
+    Matches the shop's burgundy theme (#6b2433), authentic fonts, and legal declaration.
+    """
+    if not shop_settings:
+        st = load_settings()
+        shop_settings = {
+            "header_left": st.get("header_left", "વાયુ આદિતી"),
+            "header_center": st.get("header_center", "॥ શ્રી હરિ ॥"),
+            "header_right": st.get("header_right", "બ્રિજેશભાઈ ૯૮૨૫૧ ૬૨૦૬૫"),
+            "shop_name_gu": st.get("shop_name_gu", "સોની નટવરલાલ હિંમતલાલ"),
+            "proprietor": st.get("proprietor", "સોની બ્રિજેશ નટવરલાલ"),
+            "tagline": st.get("tagline", "સોના-ચાંદીના દાગીના બનાવનાર તથા વેચનાર."),
+            "address": st.get("address", "જૈન દેરાસર પાસે, બાવળા-૩૮૨૨૨૦. જી. અમદાવાદ."),
+            "gstin": st.get("gstin", "24BPXPS8279A1Z7")
+        }
+
+    logo_b64 = get_nh_logo_base64()
+
+    voucher_no = str(urd_data.get("invoice_no") or urd_data.get("voucher_no") or "1")
+    raw_date = str(urd_data.get("purchase_date") or "")
+    try:
+        if "-" in raw_date:
+            dt = datetime.strptime(raw_date.split()[0], "%Y-%m-%d")
+            date_str = dt.strftime("%d/%m/%Y")
+        else:
+            date_str = raw_date
+    except Exception:
+        date_str = raw_date or datetime.now().strftime("%d/%m/%Y")
+
+    cust_name = urd_data.get("supplier_name") or urd_data.get("customer_name") or "Customer"
+    cust_uid = urd_data.get("supplier_uid") or urd_data.get("customer_uid") or ""
+    cust_mob = urd_data.get("mobile") or urd_data.get("phone") or ""
+    cust_addr = urd_data.get("address") or ""
+
+    desc = urd_data.get("description", "જૂનું સોનું / દાગીના")
+    gross_g = (urd_data.get("weight_mg", 0) or urd_data.get("gross_weight_mg", 0)) / 1000.0
+    touch = float(urd_data.get("touch_purity", 100.0) or 100.0)
+    fine_g = (urd_data.get("fine_weight_mg", 0)) / 1000.0
+    if fine_g <= 0 and gross_g > 0:
+        fine_g = round(gross_g * (touch / 100.0), 3)
+
+    rate_rs = (urd_data.get("rate_paise", 0)) / 100.0
+    subtotal_rs = (urd_data.get("subtotal_paise", 0)) / 100.0
+    gst_rate = float(urd_data.get("gst_rate_percent", 5.0) or 5.0)
+    gst_rs = (urd_data.get("gst_paise", 0)) / 100.0
+    gst_treatment = str(urd_data.get("gst_treatment", "DEDUCTED")).upper()
+    net_payout_rs = (urd_data.get("net_payout_paise", 0) or urd_data.get("total_paise", 0)) / 100.0
+    mode = str(urd_data.get("payment_mode", "CASH")).upper()
+
+    treatment_label = "કપાત (Deducted)" if gst_treatment == "DEDUCTED" else "ઉમેરેલ (Added)"
+    words_payout = f"Rupees {num_to_words_title_case(round(net_payout_rs))} Only"
+
+    pw, ph = ("148mm", "210mm") if page_size.upper() == "A5" else ("210mm", "297mm")
+
+    html = f"""<!DOCTYPE html>
+<html lang="gu">
+<head>
+<meta charset="utf-8">
+<style>
+@page {{ size: {pw} {ph}; margin: 0; }}
+* {{ box-sizing: border-box; }}
+body {{
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #2a1a1a;
+    font-family: "Noto Sans Gujarati", "Tinos", system-ui, sans-serif;
+    font-size: 8.5pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}}
+.paper {{
+    width: {pw};
+    min-height: {ph};
+    margin: 0 auto;
+    padding: 6mm 7mm;
+    background: #fffaf6;
+}}
+.hd {{
+    border: 1.2px solid #6b2433;
+    margin-bottom: 2mm;
+}}
+.hd .top {{
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    padding: 0.6mm 2mm;
+    font-weight: 700;
+    font-size: 7.5pt;
+    border-bottom: 1px solid #6b2433;
+}}
+.hd .top span:nth-child(2) {{ text-align: center; }}
+.hd .top span:nth-child(3) {{ text-align: right; }}
+.hd .name {{
+    display: flex;
+    gap: 3mm;
+    align-items: center;
+    padding: 1.2mm 2mm;
+}}
+.logo {{ height: 11mm; width: auto; display: block; }}
+.hd h1 {{ margin: 0; font-size: 11pt; color: #6b2433; text-align: center; line-height: 1.2; }}
+.hd .sub {{ text-align: center; font-size: 6.8pt; line-height: 1.25; }}
+.hd .badge {{
+    background: #6b2433;
+    color: #fff;
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-align: center;
+    padding: 1mm;
+    letter-spacing: 0.5px;
+}}
+.meta {{
+    display: flex;
+    justify-content: space-between;
+    margin: 1.5mm 0;
+    font-size: 8.5pt;
+}}
+.box {{
+    border: 1.2px solid #6b2433;
+    padding: 1.5mm 2.5mm;
+    margin-bottom: 2mm;
+    background: #fff;
+    font-size: 8pt;
+    line-height: 1.35;
+}}
+table {{
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2mm;
+}}
+th, td {{
+    border: 1px solid #6b2433;
+    padding: 1.2mm 1.5mm;
+    font-size: 8pt;
+    vertical-align: middle;
+}}
+th {{
+    background: #f1d9cf;
+    text-align: center;
+    font-weight: 700;
+}}
+td.n {{ text-align: right; }}
+.tot td {{
+    font-weight: 700;
+    background: #f6e7df;
+}}
+.sum {{
+    display: flex;
+    gap: 3mm;
+    margin-top: 1mm;
+    align-items: stretch;
+}}
+.left-sum {{
+    flex: 1;
+    border: 1px solid #6b2433;
+    padding: 1.5mm 2mm;
+    font-size: 7.8pt;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}}
+.calc {{
+    width: 60mm;
+    border-collapse: collapse;
+}}
+.calc td {{
+    border: 1px solid #6b2433;
+    padding: 0.8mm 1.5mm;
+    font-size: 8pt;
+}}
+.calc td:last-child {{ text-align: right; }}
+.calc .highlight td {{
+    font-weight: 700;
+    background: #f1d9cf;
+    font-size: 9pt;
+    color: #6b2433;
+}}
+.dec {{
+    margin-top: 2mm;
+    font-size: 6.8pt;
+    color: #555;
+    line-height: 1.2;
+    border-top: 1px dashed #b9a0a0;
+    padding-top: 1mm;
+}}
+.foot {{
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4mm;
+    font-size: 8pt;
+    align-items: end;
+}}
+.sig {{
+    text-align: center;
+    min-width: 44mm;
+    border-top: 1px solid #6b2433;
+    padding-top: 1mm;
+    font-weight: 600;
+}}
+</style>
+</head>
+<body>
+<div class="paper">
+  <div class="hd">
+    <div class="top">
+      <span>{shop_settings['header_left']}</span>
+      <span>{shop_settings['header_center']}</span>
+      <span>{shop_settings['header_right']}</span>
+    </div>
+    <div class="top" style="border-bottom: 1px solid #6b2433; font-weight: 600;">
+      <span>GSTIN : {shop_settings['gstin']}</span>
+      <span></span>
+      <span>બાવળા (અમદાવાદ)</span>
+    </div>
+    <div class="name">
+      <img class="logo" alt="NH logo" src="data:image/png;base64,{logo_b64}">
+      <div style="flex:1">
+        <h1>{shop_settings['shop_name_gu']}</h1>
+        <div class="sub">
+          પ્રોપરાઈટર : {shop_settings['proprietor']}<br>
+          <b>{shop_settings['tagline']}</b><br>
+          {shop_settings['address']}
+        </div>
+      </div>
+    </div>
+    <div class="badge">
+      જૂનું સોનું / પસ્તી ખરીદ વાઉચર (URD PURCHASE VOUCHER - Section 31(3)(f))
+    </div>
+  </div>
+
+  <div class="meta">
+    <div><b>વાઉચર નં. (Voucher No.):</b> #{voucher_no}</div>
+    <div><b>તારીખ (Date):</b> {date_str}</div>
+  </div>
+
+  <div class="box">
+    <div style="display: flex; justify-content: space-between;">
+      <div><b>ગ્રાહક / વેચનાર (Seller):</b> {cust_name}</div>
+      <div><b>આધાર નં. (Aadhaar UID):</b> <span style="font-family: monospace; font-size: 8.5pt; font-weight: bold;">{cust_uid or '—'}</span></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 1mm;">
+      <div><b>મોબાઇલ (Mobile):</b> {cust_mob or '—'}</div>
+      <div><b>સરનામું (Address):</b> {cust_addr or 'બાવળા'}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 6mm;">ક્રમ</th>
+        <th>વસ્તુની વિગત (Item Description)</th>
+        <th style="width: 17mm;">ગ્રોસ વજન<br><small>Gross g</small></th>
+        <th style="width: 15mm;">ટચ / પ્યોરિટી<br><small>Touch %</small></th>
+        <th style="width: 17mm;">ચોખ્ખું સોનું<br><small>Fine Wt. g</small></th>
+        <th style="width: 18mm;">ખરીદ ભાવ<br><small>Rate ₹/g</small></th>
+        <th style="width: 22mm;">રકમ<br><small>Gross ₹</small></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="text-align: center;">1</td>
+        <td style="font-weight: 600;">{desc}</td>
+        <td class="n">{gross_g:.3f}</td>
+        <td style="text-align: center;">{touch:.1f}%</td>
+        <td class="n">{fine_g:.3f}</td>
+        <td class="n">{rate_rs:,.0f}</td>
+        <td class="n" style="font-weight: 600;">{subtotal_rs:,.2f}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="tot">
+        <td colspan="2" style="text-align: right;">કુલ (Total)</td>
+        <td class="n">{gross_g:.3f}</td>
+        <td></td>
+        <td class="n">{fine_g:.3f}</td>
+        <td></td>
+        <td class="n">{subtotal_rs:,.2f}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="sum">
+    <div class="left-sum">
+      <div>
+        <b>અંકે રૂપિયા:</b> {words_payout}<br>
+        <b>ચૂકવણી પદ્ધતિ (Mode):</b> {mode}
+      </div>
+      <div class="dec">
+        <b>ગ્રાહકની બાંયધરી (Declaration):</b><br>
+        આથી હું ખાતરી આપું છું કે વેચેલ દાગીના મારી અંગત માલિકીના છે, કોઈપણ વિવાદ વગરના છે અને તેનું સંપૂર્ણ ચુકવણું મને મળેલ છે.
+      </div>
+    </div>
+
+    <table class="calc">
+      <tr>
+        <td>માલ રકમ (Gross Value)</td>
+        <td>{subtotal_rs:,.2f}</td>
+      </tr>
+      <tr>
+        <td>{gst_rate:.1f}% GST ({treatment_label})</td>
+        <td style="color: {'#b3261e' if gst_treatment == 'DEDUCTED' else '#16a34a'}; font-weight: 600;">
+          {'-' if gst_treatment == 'DEDUCTED' else '+'} {gst_rs:,.2f}
+        </td>
+      </tr>
+      <tr class="highlight">
+        <td>ચૂકવેલ ચોખ્ખી રકમ (Net Payout)</td>
+        <td>₹ {net_payout_rs:,.2f}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="foot">
+    <div class="sig">
+      ગ્રાહક / વેચનારની સહી<br>
+      <span style="font-size: 6.8pt; color: #555;">(Customer Signature)</span>
+    </div>
+    <div class="sig">
+      સોની નટવરલાલ હિંમતલાલ<br>
+      <span style="font-size: 6.8pt; color: #555;">પ્રોપરાઈટર સહી</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>"""
+    return html
+
+def export_urd_voucher_to_pdf(urd_data: dict, output_path: str, page_size: str = "A5") -> bool:
+    """Exports URD Purchase Voucher directly to single-page PDF with pixel-perfect accuracy."""
+    try:
+        dirname = os.path.dirname(output_path)
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
+
+        html_content = generate_urd_voucher_html(urd_data, page_size=page_size)
+        browser = find_headless_browser()
+
+        if browser:
+            with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as tf:
+                tf.write(html_content)
+                temp_html = tf.name
+
+            try:
+                cmd = [
+                    browser,
+                    "--headless=new",
+                    "--disable-gpu",
+                    "--no-pdf-header-footer",
+                    f"--print-to-pdf={os.path.abspath(output_path)}",
+                    f"file:///{os.path.abspath(temp_html).replace(os.sep, '/')}"
+                ]
+                res = subprocess.run(cmd, capture_output=True, timeout=20)
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    return True
+                else:
+                    print(f"[URD PDF Export Error] Browser returned: {res.stderr.decode('utf-8', errors='ignore')}")
+            finally:
+                if os.path.exists(temp_html):
+                    try:
+                        os.remove(temp_html)
+                    except Exception:
+                        pass
+
+        # Fallback to Qt QPrinter
+        printer = QPrinter(QPrinter.PrinterResolution)
+        printer.setOutputFormat(QPrinter.PdfFormat)
+        printer.setPageSize(QPageSize(QPageSize.A5))
+        printer.setPageMargins(QMarginsF(3, 3, 3, 3), QPageLayout.Millimeter)
+        printer.setOutputFileName(output_path)
+
+        paint_rect = printer.pageLayout().paintRectPixels(printer.resolution())
+        doc = QTextDocument()
+        doc.setDocumentMargin(0)
+        doc.setPageSize(QSizeF(paint_rect.width(), paint_rect.height()))
+        doc.setHtml(html_content)
+        doc.print_(printer)
+        return True
+
+    except Exception as e:
+        print(f"[Print Manager] URD voucher PDF export failed: {e}")
+        return False
+
+def print_or_pdf_urd_voucher(urd_data: dict, parent_window=None, save_pdf_path: str = None, page_size: str = "A5") -> bool:
+    """Renders URD voucher and opens print dialog or exports to PDF."""
+    if save_pdf_path:
+        return export_urd_voucher_to_pdf(urd_data, save_pdf_path, page_size=page_size)
+
+    invoices_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "invoices")
+    os.makedirs(invoices_dir, exist_ok=True)
+    cust_name = urd_data.get("supplier_name") or urd_data.get("customer_name") or "Customer"
+    safe_name = re.sub(r'[^a-zA-Z0-9_\u0A80-\u0AFF]', '_', str(cust_name))
+    voucher_no = str(urd_data.get("invoice_no") or urd_data.get("voucher_no") or "1")
+    pdf_path = os.path.join(invoices_dir, f"URD_Voucher_{voucher_no}_{safe_name}.pdf")
+
+    success = export_urd_voucher_to_pdf(urd_data, pdf_path, page_size=page_size)
+    if not success:
+        return False
+
+    printer = QPrinter(QPrinter.HighResolution)
+    printer.setPageSize(QPageSize(QPageSize.A5))
+    printer.setPageMargins(QMarginsF(3, 3, 3, 3), QPageLayout.Millimeter)
+
+    dialog = QPrintDialog(printer, parent_window)
+    if dialog.exec():
+        try:
+            pdf_doc = QPdfDocument()
+            pdf_doc.load(pdf_path)
+            if pdf_doc.pageCount() > 0:
+                painter = QPainter(printer)
+                paint_rect = printer.pageLayout().paintRectPixels(printer.resolution())
+                page_img = pdf_doc.render(0, paint_rect.size())
+                painter.drawImage(0, 0, page_img)
+                painter.end()
+                return True
+        except Exception as e:
+            print(f"[Print Manager] Physical print error: {e}")
+            try:
+                os.startfile(pdf_path, "print")
+                return True
+            except Exception:
+                pass
+    else:
+        try:
+            os.startfile(pdf_path)
+        except Exception:
+            pass
+
+    return True

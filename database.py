@@ -116,6 +116,14 @@ def init_db():
         ("customers", "aadhaar_no", "TEXT DEFAULT ''"),
         ("bills", "payment_ref", "TEXT DEFAULT ''"),
         ("ledger", "payment_ref", "TEXT DEFAULT ''"),
+        ("purchases", "purchase_type", "TEXT DEFAULT 'DEALER'"),
+        ("purchases", "customer_id", "INTEGER DEFAULT NULL"),
+        ("purchases", "supplier_uid", "TEXT DEFAULT ''"),
+        ("purchases", "touch_purity", "REAL DEFAULT 100.0"),
+        ("purchases", "fine_weight_mg", "INTEGER DEFAULT 0"),
+        ("purchases", "gst_rate_percent", "REAL DEFAULT 3.0"),
+        ("purchases", "gst_treatment", "TEXT DEFAULT 'ADDED'"),
+        ("purchases", "net_payout_paise", "INTEGER DEFAULT 0"),
     ]:
         try:
             c.execute(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_type};")
@@ -144,6 +152,15 @@ def add_customer(name_gu: str, mobile: str, address: str = "", name_en: str = ""
     conn.commit()
     conn.close()
     return cust_id
+
+def get_all_customers() -> List[Dict]:
+    """Returns all customers sorted alphabetically for selection dropdowns."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM customers ORDER BY name_gu ASC, name_en ASC, id DESC;")
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows
 
 def search_customers(keyword: str) -> List[Dict]:
     conn = get_connection()
@@ -374,7 +391,7 @@ def get_dashboard_metrics() -> Dict:
         "net_gst_paise": net_gst_paise
     }
 
-# ----------------- Wholesale Purchases (Inward Register) -----------------
+# ----------------- Wholesale Purchases & URD Customer Old Gold -----------------
 
 def add_purchase(
     invoice_no: str,
@@ -389,38 +406,147 @@ def add_purchase(
     total_paise: int,
     payment_mode: str = "CASH",
     payment_ref: str = "",
-    payment_status: str = "PAID"
+    payment_status: str = "PAID",
+    purchase_type: str = "DEALER",
+    customer_id: Optional[int] = None,
+    supplier_uid: str = "",
+    touch_purity: float = 100.0,
+    fine_weight_mg: int = 0,
+    gst_rate_percent: float = 3.0,
+    gst_treatment: str = "ADDED",
+    net_payout_paise: int = 0
 ) -> int:
     conn = get_connection()
     c = conn.cursor()
+    if net_payout_paise <= 0:
+        net_payout_paise = total_paise
+
     c.execute("""
         INSERT INTO purchases (
             invoice_no, purchase_date, supplier_name, supplier_gstin,
             description, weight_mg, rate_paise, subtotal_paise,
-            gst_paise, total_paise, payment_mode, payment_ref, payment_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            gst_paise, total_paise, payment_mode, payment_ref, payment_status,
+            purchase_type, customer_id, supplier_uid, touch_purity,
+            fine_weight_mg, gst_rate_percent, gst_treatment, net_payout_paise
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     """, (
         invoice_no.strip(), purchase_date, supplier_name.strip(), supplier_gstin.strip().upper(),
         description.strip(), weight_mg, rate_paise, subtotal_paise,
-        gst_paise, total_paise, payment_mode, payment_ref.strip(), payment_status
+        gst_paise, total_paise, payment_mode, payment_ref.strip(), payment_status,
+        purchase_type, customer_id, supplier_uid.strip(), touch_purity,
+        fine_weight_mg, gst_rate_percent, gst_treatment, net_payout_paise
     ))
     pid = c.lastrowid
+
+    # If this is an URD purchase and payment mode is KHATA, credit customer's ledger!
+    if purchase_type == "URD" and customer_id and payment_mode.upper() in ["KHATA", "ADJUST IN KHATA", "LEDGER"]:
+        c.execute("""
+            INSERT INTO ledger (customer_id, entry_date, entry_type, amount_paise, bill_id, payment_mode, remark, payment_ref)
+            VALUES (?, ?, 'JAMA', ?, NULL, 'OLD GOLD (URD)', ?, ?);
+        """, (customer_id, purchase_date, net_payout_paise, f"URD જૂનું સોનું ખરીદી વાઉચર #{invoice_no}", payment_ref.strip()))
+
     conn.commit()
     conn.close()
     return pid
 
-def get_purchases(keyword: str = "") -> List[Dict]:
+def add_urd_purchase(
+    voucher_no: str,
+    purchase_date: str,
+    customer_name: str,
+    customer_uid: str,
+    customer_id: Optional[int],
+    description: str,
+    gross_weight_mg: int,
+    touch_purity: float,
+    fine_weight_mg: int,
+    rate_paise: int,
+    subtotal_paise: int,
+    gst_rate_percent: float,
+    gst_paise: int,
+    gst_treatment: str,
+    net_payout_paise: int,
+    payment_mode: str = "CASH",
+    payment_ref: str = ""
+) -> int:
+    """Convenience method to record an official URD Purchase / Old Gold buyback."""
+    total_paise = subtotal_paise + (gst_paise if gst_treatment == "ADDED" else -gst_paise)
+    return add_purchase(
+        invoice_no=voucher_no,
+        purchase_date=purchase_date,
+        supplier_name=customer_name,
+        supplier_gstin="",
+        description=description,
+        weight_mg=gross_weight_mg,
+        rate_paise=rate_paise,
+        subtotal_paise=subtotal_paise,
+        gst_paise=gst_paise,
+        total_paise=total_paise,
+        payment_mode=payment_mode,
+        payment_ref=payment_ref,
+        payment_status="PAID",
+        purchase_type="URD",
+        customer_id=customer_id,
+        supplier_uid=customer_uid,
+        touch_purity=touch_purity,
+        fine_weight_mg=fine_weight_mg,
+        gst_rate_percent=gst_rate_percent,
+        gst_treatment=gst_treatment,
+        net_payout_paise=net_payout_paise
+    )
+
+def get_next_urd_voucher_number() -> int:
+    """Calculates the next sequential URD voucher number."""
     conn = get_connection()
     c = conn.cursor()
+    c.execute("SELECT invoice_no FROM purchases WHERE purchase_type = 'URD';")
+    rows = c.fetchall()
+    max_no = 0
+    for r in rows:
+        inv = str(r[0])
+        nums = re.findall(r'\d+', inv)
+        if nums:
+            val = int(nums[-1])
+            if val > max_no:
+                max_no = val
+    conn.close()
+    return max_no + 1
+
+def get_purchase_by_id(purchase_id: int) -> Optional[Dict]:
+    """Fetches full details of a specific purchase or URD voucher by ID."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM purchases WHERE id = ?;", (purchase_id,))
+    row = c.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def get_purchases(keyword: str = "", purchase_type: str = None) -> List[Dict]:
+    """
+    Returns purchases with optional keyword search and purchase_type filtering.
+    Searches across supplier/customer name, UID, GSTIN, invoice/voucher no, and description.
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    query = "SELECT * FROM purchases WHERE 1=1"
+    params = []
+
+    if purchase_type and purchase_type.upper() in ["URD", "DEALER"]:
+        query += " AND purchase_type = ?"
+        params.append(purchase_type.upper())
+
     if keyword.strip():
         q = f"%{keyword.strip()}%"
-        c.execute("""
-            SELECT * FROM purchases
-            WHERE supplier_name LIKE ? OR invoice_no LIKE ? OR description LIKE ?
-            ORDER BY purchase_date DESC, id DESC;
-        """, (q, q, q))
-    else:
-        c.execute("SELECT * FROM purchases ORDER BY purchase_date DESC, id DESC;")
+        query += """ AND (
+            supplier_name LIKE ? OR 
+            supplier_uid LIKE ? OR 
+            supplier_gstin LIKE ? OR 
+            invoice_no LIKE ? OR 
+            description LIKE ?
+        )"""
+        params.extend([q, q, q, q, q])
+
+    query += " ORDER BY purchase_date DESC, id DESC;"
+    c.execute(query, params)
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
     return rows
@@ -428,6 +554,12 @@ def get_purchases(keyword: str = "") -> List[Dict]:
 def delete_purchase(purchase_id: int) -> bool:
     conn = get_connection()
     c = conn.cursor()
+    # Check if URD with linked KHATA entry
+    c.execute("SELECT invoice_no, purchase_type FROM purchases WHERE id = ?;", (purchase_id,))
+    row = c.fetchone()
+    if row and row["purchase_type"] == "URD":
+        inv = row["invoice_no"]
+        c.execute("DELETE FROM ledger WHERE remark LIKE ?;", (f"%#{inv}%",))
     c.execute("DELETE FROM purchases WHERE id = ?;", (purchase_id,))
     conn.commit()
     conn.close()
