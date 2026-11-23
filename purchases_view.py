@@ -17,7 +17,7 @@ from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QColor, QFont
 from datetime import datetime
 
-from translations import t
+from translations import t, active_lang
 from database import (
     add_purchase, add_urd_purchase, get_purchases, delete_purchase,
     get_purchase_by_id, get_next_urd_voucher_number, get_all_customers
@@ -31,11 +31,12 @@ class AddURDPurchaseDialog(QDialog):
     """
     Dedicated dialog for purchasing old gold/jewelry from unregistered retail customers (URD).
     Captures Customer KYC (Aadhaar UID), Gross Weight, Touch/Purity %, Rate, and 5% GST deduction.
+    100% Bilingual in both English and Gujarati.
     """
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("💎 ગ્રાહક પાસેથી જૂનું સોનું / માલ ખરીદી (URD Purchase)")
-        self.setFixedSize(580, 720)
+        self.setWindowTitle(t("urd_dialog_window_title"))
+        self.setFixedSize(640, 720)
         self.setStyleSheet("""
             QDialog {
                 background-color: #F8F7F4;
@@ -75,9 +76,9 @@ class AddURDPurchaseDialog(QDialog):
         h_layout.setContentsMargins(0, 0, 0, 0)
         h_layout.setSpacing(2)
 
-        title = QLabel("💎 ગ્રાહક પાસેથી જૂનું સોનું ખરીદી (URD PURCHASE)")
+        title = QLabel(t("urd_banner_title"))
         title.setStyleSheet("font-size: 16px; font-weight: bold; color: #FFFFFF;")
-        sub = QLabel("સેક્શન ૩૧(૩)(f) મુજબ ગ્રાહક આધાર UID અને ૫% GST કપાત વાઉચર")
+        sub = QLabel(t("urd_banner_sub"))
         sub.setStyleSheet("font-size: 11px; color: #F1D9CF;")
         h_layout.addWidget(title)
         h_layout.addWidget(sub)
@@ -91,7 +92,7 @@ class AddURDPurchaseDialog(QDialog):
         self.txt_voucher = QLineEdit()
         next_no = get_next_urd_voucher_number()
         self.txt_voucher.setText(f"URD-{next_no}")
-        self.txt_voucher.setPlaceholderText("દા.ત. URD-1")
+        self.txt_voucher.setPlaceholderText("URD-1")
 
         self.dt_date = QDateEdit()
         self.dt_date.setCalendarPopup(True)
@@ -99,105 +100,105 @@ class AddURDPurchaseDialog(QDialog):
         self.dt_date.setDisplayFormat("yyyy-MM-dd")
 
         top_row.addWidget(self.txt_voucher)
-        top_row.addWidget(QLabel("તારીખ:"))
+        top_row.addWidget(QLabel(t("lbl_date_colon")))
         top_row.addWidget(self.dt_date)
-        form.addRow("વાઉચર નં. / તારીખ:", top_row)
+        form.addRow(t("lbl_voucher_no_date"), top_row)
 
         # 2. Customer Search / Selection
         self.cmb_customer = QComboBox()
         self.cmb_customer.setEditable(True)
-        self.cmb_customer.addItem("-- નવો ગ્રાહક અથવા નીચેથી પસંદ કરો --", None)
+        self.cmb_customer.addItem(t("ph_select_customer"), None)
         for c in self.customers_list:
             display_text = f"{c['name_gu'] or c['name_en']} ({c['mobile']})"
             self.cmb_customer.addItem(display_text, c)
         self.cmb_customer.currentIndexChanged.connect(self.on_customer_selected)
-        form.addRow("ગ્રાહક પસંદ કરો:", self.cmb_customer)
+        form.addRow(t("lbl_select_customer"), self.cmb_customer)
 
         # 3. Customer Name & Aadhaar UID
         cust_row = QHBoxLayout()
         self.txt_cust_name = QLineEdit()
-        self.txt_cust_name.setPlaceholderText("ગ્રાહકનું પૂરું નામ")
+        self.txt_cust_name.setPlaceholderText(t("ph_cust_name_input"))
 
         self.txt_uid = QLineEdit()
         self.txt_uid.setMaxLength(14)
-        self.txt_uid.setPlaceholderText("૧૨ આંકડાનો આધાર નં. (UID)")
+        self.txt_uid.setPlaceholderText(t("ph_cust_uid_input"))
         self.txt_uid.setStyleSheet("font-family: monospace; font-weight: bold;")
 
         cust_row.addWidget(self.txt_cust_name)
         cust_row.addWidget(self.txt_uid)
-        form.addRow("નામ / આધાર UID:", cust_row)
+        form.addRow(t("lbl_name_uid"), cust_row)
 
         # 4. Mobile & Address
         contact_row = QHBoxLayout()
         self.txt_mobile = QLineEdit()
-        self.txt_mobile.setPlaceholderText("૧૦ આંકડાનો મોબાઇલ")
+        self.txt_mobile.setPlaceholderText(t("ph_cust_mobile_input"))
         self.txt_mobile.setMaxLength(10)
 
         self.txt_address = QLineEdit()
-        self.txt_address.setPlaceholderText("ગામ / સરનામું (દા.ત. બાવળા)")
+        self.txt_address.setPlaceholderText(t("ph_cust_addr_input"))
 
         contact_row.addWidget(self.txt_mobile)
         contact_row.addWidget(self.txt_address)
-        form.addRow("મોબાઇલ / સરનામું:", contact_row)
+        form.addRow(t("lbl_mobile_address"), contact_row)
 
         # 5. Item Description
         self.txt_desc = QLineEdit()
-        self.txt_desc.setPlaceholderText("દા.ત. જૂનો હાર ૨૨K, જૂની વીંટી, પસ્તી, લગડી")
-        form.addRow("દાગીનાની વિગત:", self.txt_desc)
+        self.txt_desc.setPlaceholderText(t("ph_urd_item_desc"))
+        form.addRow(t("lbl_item_details_colon"), self.txt_desc)
 
         # 6. Weight & Touch Purity (Side by Side)
         wt_row = QHBoxLayout()
         self.txt_weight = QLineEdit()
-        self.txt_weight.setPlaceholderText("દા.ત. 15.500")
+        self.txt_weight.setPlaceholderText("15.500")
         self.txt_weight.textChanged.connect(self.calculate_totals)
 
         self.txt_touch = QLineEdit("91.6")
         self.txt_touch.setPlaceholderText("91.6")
         self.txt_touch.textChanged.connect(self.calculate_totals)
 
-        self.lbl_fine_wt = QLabel("ચોખ્ખું: 0.000 g")
+        self.lbl_fine_wt = QLabel(f"{t('lbl_fine_calc')}: 0.000 g")
         self.lbl_fine_wt.setStyleSheet("font-weight: bold; color: #6B2433; padding: 0 4px;")
 
         wt_row.addWidget(self.txt_weight)
-        wt_row.addWidget(QLabel("ટચ %:"))
+        wt_row.addWidget(QLabel(t("lbl_touch_pct")))
         wt_row.addWidget(self.txt_touch)
         wt_row.addWidget(self.lbl_fine_wt)
-        form.addRow("ગ્રોસ વજન (g) / ટચ:", wt_row)
+        form.addRow(t("lbl_gross_touch"), wt_row)
 
         # 7. Buy Rate per Gram
         self.txt_rate = QLineEdit()
-        self.txt_rate.setPlaceholderText("દા.ત. 74500 (રૂ. પ્રતિ ગ્રામ)")
+        self.txt_rate.setPlaceholderText(t("ph_buy_rate"))
         self.txt_rate.textChanged.connect(self.calculate_totals)
-        form.addRow("ખરીદ ભાવ (₹/g):", self.txt_rate)
+        form.addRow(t("lbl_buy_rate_colon"), self.txt_rate)
 
         # 8. GST Rate & Treatment
         gst_row = QHBoxLayout()
         self.cmb_gst = QComboBox()
-        self.cmb_gst.addItem("૫% GST (કારીગર / કપાત - Default)", 5.0)
-        self.cmb_gst.addItem("૩% GST (સ્ટાન્ડર્ડ સોનાનો દર)", 3.0)
-        self.cmb_gst.addItem("૦% GST (કાયદેસર છૂટ - Nil RCM)", 0.0)
+        self.cmb_gst.addItem(t("opt_gst_5_default"), 5.0)
+        self.cmb_gst.addItem(t("opt_gst_3_gold"), 3.0)
+        self.cmb_gst.addItem(t("opt_gst_0_nil"), 0.0)
         self.cmb_gst.currentIndexChanged.connect(self.calculate_totals)
 
         self.cmb_treatment = QComboBox()
-        self.cmb_treatment.addItem("રકમમાંથી કપાત (Deduct from Payout)", "DEDUCTED")
-        self.cmb_treatment.addItem("ઉપરાંત ચૂકવણી (Add to Total)", "ADDED")
+        self.cmb_treatment.addItem(t("opt_treatment_deduct"), "DEDUCTED")
+        self.cmb_treatment.addItem(t("opt_treatment_add"), "ADDED")
         self.cmb_treatment.currentIndexChanged.connect(self.calculate_totals)
 
         gst_row.addWidget(self.cmb_gst)
         gst_row.addWidget(self.cmb_treatment)
-        form.addRow("GST દર / પદ્ધતિ:", gst_row)
+        form.addRow(t("lbl_gst_method"), gst_row)
 
         # 9. Payment Mode & Ref
         pay_row = QHBoxLayout()
         self.cmb_mode = QComboBox()
-        self.cmb_mode.addItems(["CASH (રોકડા)", "BANK / UPI", "CHEQUE", "KHATA (ખાતામાં જમા)"])
+        self.cmb_mode.addItems(["CASH", "BANK / UPI", "CHEQUE", "KHATA"])
 
         self.txt_ref = QLineEdit()
-        self.txt_ref.setPlaceholderText("ચેક નં. / UTR / રીમાર્ક")
+        self.txt_ref.setPlaceholderText(t("ph_payment_ref_notes"))
 
         pay_row.addWidget(self.cmb_mode)
         pay_row.addWidget(self.txt_ref)
-        form.addRow("ચૂકવણી મોડ / નોંધ:", pay_row)
+        form.addRow(t("lbl_pay_mode_notes"), pay_row)
 
         main_layout.addLayout(form)
 
@@ -207,15 +208,15 @@ class AddURDPurchaseDialog(QDialog):
         cb_layout = QVBoxLayout(calc_box)
         cb_layout.setSpacing(4)
 
-        self.lbl_subtotal = QLabel("માલ મૂલ્ય (Gross Value): ₹ 0.00")
+        self.lbl_subtotal = QLabel(f"{t('lbl_gross_val_card')}: ₹ 0.00")
         self.lbl_subtotal.setStyleSheet("font-size: 13px; color: #2A1A1A;")
         cb_layout.addWidget(self.lbl_subtotal)
 
-        self.lbl_gst = QLabel("૫% GST કપાત: (-) ₹ 0.00")
+        self.lbl_gst = QLabel(f"{t('lbl_gst_deduct_card')}: (-) ₹ 0.00")
         self.lbl_gst.setStyleSheet("font-size: 13px; font-weight: bold; color: #DC2626;")
         cb_layout.addWidget(self.lbl_gst)
 
-        self.lbl_net_payout = QLabel("ચૂકવવાપાત્ર ચોખ્ખી રકમ (Net Payout): ₹ 0.00")
+        self.lbl_net_payout = QLabel(f"{t('lbl_net_payout_card')}: ₹ 0.00")
         self.lbl_net_payout.setStyleSheet("font-size: 16px; font-weight: bold; color: #16A34A; background: #F6E7DF; padding: 4px 8px; border-radius: 4px;")
         cb_layout.addWidget(self.lbl_net_payout)
 
@@ -223,15 +224,15 @@ class AddURDPurchaseDialog(QDialog):
 
         # Action Buttons
         btns = QHBoxLayout()
-        self.btn_cancel = QPushButton("રદ કરો (Cancel)")
+        self.btn_cancel = QPushButton(t("btn_cancel_short"))
         self.btn_cancel.setObjectName("SecondaryBtn")
         self.btn_cancel.clicked.connect(self.reject)
 
-        self.btn_save_only = QPushButton("સેવ કરો (Save Only)")
+        self.btn_save_only = QPushButton(t("btn_save_only_short"))
         self.btn_save_only.setObjectName("SecondaryBtn")
         self.btn_save_only.clicked.connect(lambda: self.save(print_voucher=False))
 
-        self.btn_save_print = QPushButton("🖨️ સેવ અને વાઉચર પ્રિન્ટ (Save & Print)")
+        self.btn_save_print = QPushButton(t("btn_save_and_print_voucher"))
         self.btn_save_print.setObjectName("GoldActionBtn")
         self.btn_save_print.setStyleSheet("background-color: #6B2433; color: #FFFFFF; font-weight: bold; padding: 8px 16px; border-radius: 4px;")
         self.btn_save_print.clicked.connect(lambda: self.save(print_voucher=True))
@@ -255,7 +256,7 @@ class AddURDPurchaseDialog(QDialog):
             wt = float(self.txt_weight.text().strip() or 0)
             touch = float(self.txt_touch.text().strip() or 100.0)
             fine_wt = round(wt * (touch / 100.0), 3)
-            self.lbl_fine_wt.setText(f"ચોખ્ખું: {fine_wt:.3f} g")
+            self.lbl_fine_wt.setText(f"{t('lbl_fine_calc')}: {fine_wt:.3f} g")
 
             rate = float(self.txt_rate.text().strip() or 0)
             subtotal = round(fine_wt * rate, 2)
@@ -266,16 +267,16 @@ class AddURDPurchaseDialog(QDialog):
             treatment = self.cmb_treatment.currentData()
             if treatment == "DEDUCTED":
                 net_payout = round(subtotal - gst, 2)
-                gst_text = f"{gst_rate:.1f}% GST કપાત: (-) {format_inr(gst)}"
+                gst_text = f"{gst_rate:.1f}% {t('lbl_gst_deduct_card')}: (-) {format_inr(gst)}"
                 self.lbl_gst.setStyleSheet("font-size: 13px; font-weight: bold; color: #DC2626;")
             else:
                 net_payout = round(subtotal + gst, 2)
-                gst_text = f"{gst_rate:.1f}% GST ઉમેરેલ: (+) {format_inr(gst)}"
+                gst_text = f"{gst_rate:.1f}% {t('lbl_gst_added_card')}: (+) {format_inr(gst)}"
                 self.lbl_gst.setStyleSheet("font-size: 13px; font-weight: bold; color: #16A34A;")
 
-            self.lbl_subtotal.setText(f"માલ મૂલ્ય (Gross Value): {format_inr(subtotal)}")
+            self.lbl_subtotal.setText(f"{t('lbl_gross_val_card')}: {format_inr(subtotal)}")
             self.lbl_gst.setText(gst_text)
-            self.lbl_net_payout.setText(f"ચૂકવવાપાત્ર ચોખ્ખી રકમ (Net Payout): {format_inr(net_payout)}")
+            self.lbl_net_payout.setText(f"{t('lbl_net_payout_card')}: {format_inr(net_payout)}")
         except Exception:
             pass
 
@@ -286,10 +287,12 @@ class AddURDPurchaseDialog(QDialog):
         voucher_no = self.txt_voucher.text().strip()
 
         if not cust_name:
-            QMessageBox.warning(self, "Attention", "કૃપા કરીને ગ્રાહકનું નામ દાખલ કરો.")
+            err = "Please enter customer name." if active_lang == "en" else "કૃપા કરીને ગ્રાહકનું નામ દાખલ કરો."
+            QMessageBox.warning(self, "Attention", err)
             return
         if not desc:
-            QMessageBox.warning(self, "Attention", "કૃપા કરીને જૂના સોના / વસ્તુની વિગત દાખલ કરો.")
+            err = "Please enter old gold / item description." if active_lang == "en" else "કૃપા કરીને જૂના સોના / વસ્તુની વિગત દાખલ કરો."
+            QMessageBox.warning(self, "Attention", err)
             return
 
         try:
@@ -299,7 +302,8 @@ class AddURDPurchaseDialog(QDialog):
             if wt <= 0 or rate <= 0:
                 raise ValueError
         except Exception:
-            QMessageBox.warning(self, "Attention", "કૃપા કરીને સાચું વજન અને ભાવ દાખલ કરો.")
+            err = "Please enter valid weight and rate." if active_lang == "en" else "કૃપા કરીને સાચું વજન અને ભાવ દાખલ કરો."
+            QMessageBox.warning(self, "Attention", err)
             return
 
         fine_wt = round(wt * (touch / 100.0), 3)
@@ -346,11 +350,12 @@ class AddURDPurchaseDialog(QDialog):
 class AddPurchaseDialog(QDialog):
     """
     Standard dialog for wholesale purchases from registered bullion dealers / merchants.
+    100% Bilingual in both English and Gujarati.
     """
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(t("btn_add_dealer_purchase"))
-        self.setFixedSize(540, 640)
+        self.setWindowTitle(t("dealer_dialog_title"))
+        self.setFixedSize(580, 650)
         self.setStyleSheet("""
             QDialog {
                 background-color: #F8F7F4;
@@ -373,7 +378,7 @@ class AddPurchaseDialog(QDialog):
         layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(10)
 
-        title = QLabel(t("btn_add_dealer_purchase"))
+        title = QLabel(t("dealer_dialog_title"))
         title.setStyleSheet("font-size: 18px; font-weight: bold; color: #0B1E19;")
         layout.addWidget(title)
 
@@ -381,7 +386,7 @@ class AddPurchaseDialog(QDialog):
         form.setSpacing(10)
 
         self.txt_supplier = QLineEdit()
-        self.txt_supplier.setPlaceholderText("દા.ત. સુરત બુલિયન / અમદાવાદ ઝવેરી")
+        self.txt_supplier.setPlaceholderText(t("ph_dealer_supplier"))
         form.addRow(t("lbl_supplier_name"), self.txt_supplier)
 
         self.txt_gstin = QLineEdit()
@@ -389,7 +394,7 @@ class AddPurchaseDialog(QDialog):
         form.addRow(t("lbl_supplier_gstin"), self.txt_gstin)
 
         self.txt_inv_no = QLineEdit()
-        self.txt_inv_no.setPlaceholderText("દા.ત. INV-8921")
+        self.txt_inv_no.setPlaceholderText("INV-8921")
         form.addRow(t("lbl_inv_no"), self.txt_inv_no)
 
         self.dt_date = QDateEdit()
@@ -399,26 +404,26 @@ class AddPurchaseDialog(QDialog):
         form.addRow(t("lbl_purchase_date"), self.dt_date)
 
         self.txt_desc = QLineEdit()
-        self.txt_desc.setPlaceholderText("દા.ત. ૨૪K સોનાનો બાર (Gold Bar) / ૨૨K દાગીના")
+        self.txt_desc.setPlaceholderText(t("ph_dealer_desc"))
         form.addRow(t("lbl_purchase_desc"), self.txt_desc)
 
         self.txt_weight = QLineEdit()
-        self.txt_weight.setPlaceholderText("દા.ત. 100.000")
+        self.txt_weight.setPlaceholderText("100.000")
         self.txt_weight.textChanged.connect(self.calculate_totals)
         form.addRow(t("th_weight"), self.txt_weight)
 
         self.txt_rate = QLineEdit()
-        self.txt_rate.setPlaceholderText("દા.ત. 74500")
+        self.txt_rate.setPlaceholderText("74500")
         self.txt_rate.textChanged.connect(self.calculate_totals)
         form.addRow(t("th_rate"), self.txt_rate)
 
         # GST Rate Selector
         self.cmb_gst = QComboBox()
-        self.cmb_gst.addItem("૩% GST (બુલિયન / ગોલ્ડ બાર)", 3.0)
-        self.cmb_gst.addItem("૫% GST (કારીગર મજૂરી / Job Work)", 5.0)
-        self.cmb_gst.addItem("૦% GST (કરમુક્ત / Exempt)", 0.0)
+        self.cmb_gst.addItem(t("opt_gst_3_dealer"), 3.0)
+        self.cmb_gst.addItem(t("opt_gst_5_dealer"), 5.0)
+        self.cmb_gst.addItem(t("opt_gst_0_nil"), 0.0)
         self.cmb_gst.currentIndexChanged.connect(self.calculate_totals)
-        form.addRow("GST દર (%):", self.cmb_gst)
+        form.addRow(t("lbl_gst_rate"), self.cmb_gst)
 
         # Calculation Display Box
         calc_box = QFrame()
@@ -426,33 +431,33 @@ class AddPurchaseDialog(QDialog):
         cb_layout = QVBoxLayout(calc_box)
         cb_layout.setSpacing(6)
 
-        self.lbl_subtotal = QLabel("માલ રકમ (Subtotal): ₹ 0.00")
+        self.lbl_subtotal = QLabel(f"{t('lbl_gross_val_card')}: ₹ 0.00")
         self.lbl_subtotal.setStyleSheet("font-size: 13px; color: #1A2521;")
         cb_layout.addWidget(self.lbl_subtotal)
 
-        self.lbl_gst = QLabel("GST ઇનપુટ ક્રેડિટ (ITC): ₹ 0.00")
+        self.lbl_gst = QLabel(f"{t('lbl_itc_credit')}: ₹ 0.00")
         self.lbl_gst.setStyleSheet("font-size: 13px; font-weight: bold; color: #16A34A;")
         cb_layout.addWidget(self.lbl_gst)
 
-        self.lbl_total = QLabel("કુલ બિલ રકમ: ₹ 0.00")
+        self.lbl_total = QLabel(f"{t('lbl_total_bill_amt')}: ₹ 0.00")
         self.lbl_total.setStyleSheet("font-size: 16px; font-weight: bold; color: #0B1E19;")
         cb_layout.addWidget(self.lbl_total)
 
-        form.addRow("હિસાબ (Totals):", calc_box)
+        form.addRow(t("lbl_totals_box"), calc_box)
 
         self.cmb_mode = QComboBox()
         self.cmb_mode.addItems(["BANK TRANSFER / RTGS", "CHEQUE", "CASH", "UPI"])
         form.addRow(t("lbl_pay_mode"), self.cmb_mode)
 
         self.txt_ref = QLineEdit()
-        self.txt_ref.setPlaceholderText("UTR / ચેક નં. / રીમાર્ક")
-        form.addRow("UTR / Cheque Ref:", self.txt_ref)
+        self.txt_ref.setPlaceholderText(t("ph_payment_ref_notes"))
+        form.addRow(t("lbl_payment_ref"), self.txt_ref)
 
         layout.addLayout(form)
 
         btns = QHBoxLayout()
         btns.addStretch()
-        self.btn_cancel = QPushButton(t("btn_cancel"))
+        self.btn_cancel = QPushButton(t("btn_cancel_short"))
         self.btn_cancel.setObjectName("SecondaryBtn")
         self.btn_cancel.clicked.connect(self.reject)
 
@@ -473,9 +478,9 @@ class AddPurchaseDialog(QDialog):
             gst = round(subtotal * (gst_rate / 100.0), 2)
             total = round(subtotal + gst, 2)
 
-            self.lbl_subtotal.setText(f"માલ રકમ (Subtotal): {format_inr(subtotal)}")
-            self.lbl_gst.setText(f"{gst_rate:.1f}% GST ઇનપુટ ક્રેડિટ (ITC): {format_inr(gst)}")
-            self.lbl_total.setText(f"કુલ બિલ રકમ: {format_inr(total)}")
+            self.lbl_subtotal.setText(f"{t('lbl_gross_val_card')}: {format_inr(subtotal)}")
+            self.lbl_gst.setText(f"{gst_rate:.1f}% {t('lbl_itc_credit')}: {format_inr(gst)}")
+            self.lbl_total.setText(f"{t('lbl_total_bill_amt')}: {format_inr(total)}")
         except Exception:
             pass
 
@@ -485,7 +490,8 @@ class AddPurchaseDialog(QDialog):
         desc = self.txt_desc.text().strip()
 
         if not supplier or not inv_no or not desc:
-            QMessageBox.warning(self, "Attention", "કૃપા કરીને વેપારીનું નામ, બિલ નં. અને વસ્તુની વિગત દાખલ કરો.")
+            err = "Please enter supplier name, invoice no, and description." if active_lang == "en" else "કૃપા કરીને વેપારીનું નામ, બિલ નં. અને વસ્તુની વિગત દાખલ કરો."
+            QMessageBox.warning(self, "Attention", err)
             return
 
         try:
@@ -494,7 +500,8 @@ class AddPurchaseDialog(QDialog):
             if wt <= 0 or rate <= 0:
                 raise ValueError
         except Exception:
-            QMessageBox.warning(self, "Attention", "કૃપા કરીને સાચું વજન અને ભાવ દાખલ કરો.")
+            err = "Please enter valid weight and rate." if active_lang == "en" else "કૃપા કરીને સાચું વજન અને ભાવ દાખલ કરો."
+            QMessageBox.warning(self, "Attention", err)
             return
 
         subtotal = round(wt * rate, 2)
@@ -596,9 +603,9 @@ class PurchasesView(QWidget):
         filter_bar = QHBoxLayout()
         filter_bar.setSpacing(10)
 
-        self.btn_filter_all = QPushButton("બધા રેકોર્ડ્સ (All)")
-        self.btn_filter_urd = QPushButton("💎 ગ્રાહક ખરીદી (URD 5% GST)")
-        self.btn_filter_dealer = QPushButton("🏢 વેપારી ખરીદી (Dealer)")
+        self.btn_filter_all = QPushButton(t("btn_filter_all_purchases"))
+        self.btn_filter_urd = QPushButton(t("btn_filter_urd_purchases"))
+        self.btn_filter_dealer = QPushButton(t("btn_filter_dealer_purchases"))
 
         for btn, ptype in [(self.btn_filter_all, None), (self.btn_filter_urd, "URD"), (self.btn_filter_dealer, "DEALER")]:
             btn.setCheckable(True)
@@ -661,17 +668,17 @@ class PurchasesView(QWidget):
 
     def setup_table_headers(self):
         self.table.setHorizontalHeaderLabels([
-            "તારીખ (Date)",
-            "વાઉચર / બિલ #",
-            "પ્રકાર (Type)",
-            "વેચનાર / પેઢી (Name & UID/GSTIN)",
-            "દાગીનાની વિગત",
-            "ગ્રોસ વજન",
-            "ટચ / ચોખ્ખું",
-            "ખરીદ ભાવ",
-            "GST (ITC)",
-            "ચૂકવેલ રકમ",
-            "એક્શન (Action)"
+            t("th_pur_date"),
+            t("th_pur_voucher"),
+            t("th_pur_type"),
+            t("th_pur_party"),
+            t("th_pur_desc"),
+            t("th_pur_gross_wt"),
+            t("th_pur_touch_fine"),
+            t("th_pur_rate"),
+            t("th_pur_gst_itc"),
+            t("th_pur_payout"),
+            t("th_pur_action")
         ])
 
     def load_purchases(self):
@@ -687,10 +694,10 @@ class PurchasesView(QWidget):
             # Type Badge (URD vs DEALER)
             ptype = p.get("purchase_type", "DEALER")
             if ptype == "URD":
-                type_lbl = "💎 URD ગ્રાહક"
+                type_lbl = t("badge_urd_cust")
                 type_color = QColor("#6B2433")
             else:
-                type_lbl = "🏢 વેપારી"
+                type_lbl = t("badge_dealer")
                 type_color = QColor("#1E3A8A")
 
             type_item = QTableWidgetItem(type_lbl)
@@ -747,7 +754,7 @@ class PurchasesView(QWidget):
             # Print Voucher button (Available for URD purchases)
             if ptype == "URD":
                 btn_print = QPushButton("🖨️")
-                btn_print.setToolTip("URD ખરીદ વાઉચર પ્રિન્ટ કરો")
+                btn_print.setToolTip(t("tip_print_urd"))
                 btn_print.setMaximumWidth(32)
                 btn_print.setCursor(Qt.PointingHandCursor)
                 btn_print.clicked.connect(lambda _, pid=p["id"]: self.print_urd_voucher(pid))
@@ -755,7 +762,7 @@ class PurchasesView(QWidget):
 
             # Delete button
             btn_del = QPushButton("❌")
-            btn_del.setToolTip("એન્ટ્રી કાઢી નાખો")
+            btn_del.setToolTip(t("tip_delete_entry"))
             btn_del.setMaximumWidth(32)
             btn_del.setCursor(Qt.PointingHandCursor)
             btn_del.clicked.connect(lambda _, pid=p["id"]: self.delete_entry(pid))
@@ -771,7 +778,7 @@ class PurchasesView(QWidget):
     def delete_entry(self, purchase_id: int):
         reply = QMessageBox.question(
             self, "Confirm Delete",
-            "શું તમે ખરેખર આ ખરીદી/વાઉચર એન્ટ્રી કાઢી નાખવા માંગો છો?\nજો ખાતામાં જમા કરેલ હશે તો તે પણ રદ થશે.",
+            t("msg_confirm_delete_purchase"),
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
@@ -791,6 +798,9 @@ class PurchasesView(QWidget):
         self.lbl_title.setText(t("purchases_title"))
         self.btn_add_urd.setText(t("btn_add_urd_purchase"))
         self.btn_add_dealer.setText(t("btn_add_dealer_purchase"))
+        self.btn_filter_all.setText(t("btn_filter_all_purchases"))
+        self.btn_filter_urd.setText(t("btn_filter_urd_purchases"))
+        self.btn_filter_dealer.setText(t("btn_filter_dealer_purchases"))
         self.txt_search.setPlaceholderText("🔍 " + t("lbl_search_purchases"))
         self.setup_table_headers()
         self.load_purchases()

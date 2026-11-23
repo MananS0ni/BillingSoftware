@@ -347,7 +347,7 @@ class BillHistoryView(QWidget):
             a_layout.setSpacing(6)
 
             # View Details Button
-            btn_view = QPushButton("👁️ વિગત")
+            btn_view = QPushButton(t("btn_view_details_short"))
             btn_view.setStyleSheet("""
                 QPushButton {
                     background-color: #F1F5F9;
@@ -365,7 +365,7 @@ class BillHistoryView(QWidget):
             a_layout.addWidget(btn_view)
 
             # Print Button
-            btn_print = QPushButton("🖨️ પ્રિન્ટ")
+            btn_print = QPushButton(t("btn_print_short"))
             btn_print.setStyleSheet("""
                 QPushButton {
                     background-color: #12382C;

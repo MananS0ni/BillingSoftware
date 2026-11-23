@@ -33,7 +33,7 @@ class BillDetailsDialog(QDialog):
 
         # Header Badge
         top_box = QHBoxLayout()
-        lbl_title = QLabel(f"Tax Invoice #{self.bill_data['bill_no']}")
+        lbl_title = QLabel(f"{t('lbl_bill_details_title')} #{self.bill_data['bill_no']}")
         lbl_title.setStyleSheet("font-size: 22px; font-weight: bold; color: #0B1E19;")
         top_box.addWidget(lbl_title)
 
@@ -50,22 +50,22 @@ class BillDetailsDialog(QDialog):
         c_layout = QGridLayout(card_cust)
         c_layout.setContentsMargins(16, 12, 16, 12)
 
-        c_layout.addWidget(QLabel("<b>Customer Name:</b>"), 0, 0)
+        c_layout.addWidget(QLabel(f"<b>{t('lbl_cust_name_colon')}</b>"), 0, 0)
         c_layout.addWidget(QLabel(self.bill_data["name_gu"]), 0, 1)
 
-        c_layout.addWidget(QLabel("<b>Mobile Number:</b>"), 0, 2)
+        c_layout.addWidget(QLabel(f"<b>{t('lbl_mobile_colon')}</b>"), 0, 2)
         c_layout.addWidget(QLabel(self.bill_data["mobile"]), 0, 3)
 
-        c_layout.addWidget(QLabel("<b>Address:</b>"), 1, 0)
+        c_layout.addWidget(QLabel(f"<b>{t('lbl_address_colon')}</b>"), 1, 0)
         c_layout.addWidget(QLabel(self.bill_data["address"] or "-"), 1, 1)
 
-        c_layout.addWidget(QLabel("<b>Payment Mode:</b>"), 1, 2)
+        c_layout.addWidget(QLabel(f"<b>{t('lbl_pay_mode')}</b>"), 1, 2)
         c_layout.addWidget(QLabel(self.bill_data["payment_mode"]), 1, 3)
 
         layout.addWidget(card_cust)
 
         # Items Table
-        lbl_items = QLabel("Items Purchased (દાગીનાની વિગત):")
+        lbl_items = QLabel(t("lbl_items_purchased"))
         lbl_items.setStyleSheet("font-size: 15px; font-weight: bold;")
         layout.addWidget(lbl_items)
 
@@ -112,24 +112,24 @@ class BillDetailsDialog(QDialog):
         paid = self.bill_data["paid_paise"] / 100.0
         due = self.bill_data["balance_paise"] / 100.0
 
-        s_layout.addWidget(QLabel("Subtotal:"), 0, 0)
+        s_layout.addWidget(QLabel(f"{t('lbl_subtotal')}"), 0, 0)
         s_layout.addWidget(QLabel(f"₹ {subtotal:,.2f}"), 0, 1)
 
-        s_layout.addWidget(QLabel("CGST (1.5%):"), 1, 0)
+        s_layout.addWidget(QLabel(f"{t('lbl_cgst')}"), 1, 0)
         s_layout.addWidget(QLabel(f"₹ {cgst:,.2f}"), 1, 1)
 
-        s_layout.addWidget(QLabel("SGST (1.5%):"), 2, 0)
+        s_layout.addWidget(QLabel(f"{t('lbl_sgst')}"), 2, 0)
         s_layout.addWidget(QLabel(f"₹ {sgst:,.2f}"), 2, 1)
 
-        s_layout.addWidget(QLabel("<b>Grand Total:</b>"), 0, 2)
+        s_layout.addWidget(QLabel(f"<b>{t('lbl_grand_total')}</b>"), 0, 2)
         lbl_grand = QLabel(f"<b>₹ {grand:,.2f}</b>")
         lbl_grand.setStyleSheet("font-size: 18px; color: #0B1E19;")
         s_layout.addWidget(lbl_grand, 0, 3)
 
-        s_layout.addWidget(QLabel("Paid Amount:"), 1, 2)
+        s_layout.addWidget(QLabel(f"{t('lbl_paid_now')}"), 1, 2)
         s_layout.addWidget(QLabel(f"₹ {paid:,.2f}"), 1, 3)
 
-        s_layout.addWidget(QLabel("<b>Balance Due (Udhar):</b>"), 2, 2)
+        s_layout.addWidget(QLabel(f"<b>{t('lbl_balance_due')}</b>"), 2, 2)
         lbl_due = QLabel(f"<b>₹ {due:,.2f}</b>")
         lbl_due.setStyleSheet("font-size: 16px; color: #DC2626;" if due > 0 else "color: #16A34A;")
         s_layout.addWidget(lbl_due, 2, 3)
@@ -140,12 +140,12 @@ class BillDetailsDialog(QDialog):
         btn_bar = QHBoxLayout()
         btn_bar.addStretch()
 
-        btn_close = QPushButton("Close")
+        btn_close = QPushButton(t("btn_close"))
         btn_close.setObjectName("SecondaryBtn")
         btn_close.clicked.connect(self.accept)
         btn_bar.addWidget(btn_close)
 
-        btn_reprint = QPushButton("🖨️ Re-Print / Save PDF")
+        btn_reprint = QPushButton(t("btn_reprint_pdf"))
         btn_reprint.setObjectName("GoldActionBtn")
         btn_reprint.clicked.connect(self.reprint_bill)
         btn_bar.addWidget(btn_reprint)

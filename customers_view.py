@@ -127,7 +127,7 @@ class CustomerBillsDialog(QDialog):
     def __init__(self, customer, parent=None):
         super().__init__(parent)
         self.customer = customer
-        self.setWindowTitle(f"Past Bills - {customer['name_gu']} ({customer['mobile']})")
+        self.setWindowTitle(f"{t('dialog_past_bills_title')} - {customer['name_gu']} ({customer['mobile']})")
         self.resize(650, 450)
         self.init_ui()
 
@@ -136,14 +136,14 @@ class CustomerBillsDialog(QDialog):
         layout.setContentsMargins(20, 18, 20, 18)
         layout.setSpacing(12)
 
-        lbl = QLabel(f"📜 Past Invoices: {self.customer['name_gu']} ({self.customer['mobile']})")
+        lbl = QLabel(f"📜 {t('dialog_past_bills_title')}: {self.customer['name_gu']} ({self.customer['mobile']})")
         lbl.setStyleSheet("font-size: 16px; font-weight: bold; color: #0B1E19;")
         layout.addWidget(lbl)
 
         table = QTableWidget()
         table.setColumnCount(6)
         table.setHorizontalHeaderLabels([
-            "Bill No", "Date", "Grand Total", "Paid", "Balance (Udhar)", "Action"
+            t("th_hist_bill_no"), t("th_hist_date"), t("th_hist_grand"), t("th_hist_paid"), t("th_hist_due"), t("th_hist_action")
         ])
         h = table.horizontalHeader()
         h.setSectionResizeMode(0, QHeaderView.ResizeToContents)
@@ -171,14 +171,14 @@ class CustomerBillsDialog(QDialog):
             bal_item.setForeground(Qt.red if bal > 0 else Qt.darkGreen)
             table.setItem(r_idx, 4, bal_item)
 
-            btn = QPushButton("👁️ View Bill Details")
+            btn = QPushButton(t("btn_view_bill_details"))
             btn.setObjectName("SecondaryBtn")
             btn.clicked.connect(lambda _, b_id=b["id"]: BillDetailsDialog(b_id, self).exec())
             table.setCellWidget(r_idx, 5, btn)
 
         layout.addWidget(table)
 
-        btn_close = QPushButton("Close")
+        btn_close = QPushButton(t("btn_close"))
         btn_close.setObjectName("SecondaryBtn")
         btn_close.clicked.connect(self.accept)
         layout.addWidget(btn_close, alignment=Qt.AlignRight)
@@ -243,7 +243,7 @@ class CustomersView(QWidget):
             t("th_cust_mobile"),
             t("th_cust_address"),
             t("th_cust_balance"),
-            "જૂના બિલ (Past Bills)"
+            t("th_past_bills")
         ])
 
     def load_customers(self, query=""):
@@ -281,7 +281,7 @@ class CustomersView(QWidget):
             ab_layout.setSpacing(6)
 
             if self.on_open_ledger_callback:
-                btn_ledger = QPushButton("📖 ખાતાવહી")
+                btn_ledger = QPushButton(t("btn_ledger_khata"))
                 btn_ledger.setStyleSheet("""
                     QPushButton {
                         background-color: #12382C;
@@ -298,7 +298,7 @@ class CustomersView(QWidget):
                 btn_ledger.clicked.connect(lambda _, cust=c: self.on_open_ledger_callback(cust))
                 ab_layout.addWidget(btn_ledger)
 
-            btn_past = QPushButton("📜 જૂના બિલ")
+            btn_past = QPushButton(t("btn_past_bills"))
             btn_past.setStyleSheet("""
                 QPushButton {
                     background-color: #F1F5F9;
@@ -320,7 +320,7 @@ class CustomersView(QWidget):
     def open_past_bills(self, customer):
         bills = get_customer_bills(customer["id"])
         if not bills:
-            QMessageBox.information(self, "Past Bills", f"{customer['name_gu']} નું કોઈ જૂનું બિલ સિસ્ટમમાં નથી.\n(No past bills found for this customer).")
+            QMessageBox.information(self, t("dialog_past_bills_title"), f"{customer['name_gu']} {t('msg_no_past_bills')}")
             return
         CustomerBillsDialog(customer, self).exec()
 

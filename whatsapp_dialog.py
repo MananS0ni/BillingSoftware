@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPixmap, QImage
 
-from translations import t
+from translations import t, active_lang
 from whatsapp_manager import (
     get_whatsapp_status, ensure_bridge_running, logout_whatsapp, request_pairing_code
 )
@@ -76,12 +76,15 @@ class WhatsAppDialog(QDialog):
         # 1. Title Header
         header_box = QVBoxLayout()
         header_box.setSpacing(2)
-        self.lbl_title = QLabel("📲 WhatsApp ઓટોમેટિક બિલિંગ")
+        title_text = "📲 WhatsApp Automatic Billing" if active_lang == "en" else "📲 WhatsApp ઓટોમેટિક બિલિંગ"
+        sub_text = "Connect once; every invoice is automatically sent to the customer and owner." if active_lang == "en" else "એકવાર જોડો, પછી દરેક બિલ ગ્રાહક અને પિતાશ્રીને આપોઆપ મોકલાશે."
+        
+        self.lbl_title = QLabel(title_text)
         self.lbl_title.setStyleSheet("font-size: 20px; font-weight: bold; color: #0B1E19;")
         self.lbl_title.setAlignment(Qt.AlignCenter)
         header_box.addWidget(self.lbl_title)
 
-        self.lbl_sub = QLabel("એકવાર જોડો, પછી દરેક બિલ ગ્રાહક અને પિતાશ્રીને આપોઆપ મોકલાશે.")
+        self.lbl_sub = QLabel(sub_text)
         self.lbl_sub.setStyleSheet("font-size: 12px; color: #6E7A75;")
         self.lbl_sub.setAlignment(Qt.AlignCenter)
         header_box.addWidget(self.lbl_sub)
@@ -92,7 +95,7 @@ class WhatsAppDialog(QDialog):
         self.status_frame.setStyleSheet("background-color: #FFFFFF; border: 1.5px solid #E8E4DC; border-radius: 8px; padding: 6px;")
         status_layout = QHBoxLayout(self.status_frame)
         status_layout.setContentsMargins(8, 6, 8, 6)
-        self.lbl_status = QLabel("તપાસી રહ્યું છે...")
+        self.lbl_status = QLabel("Checking status..." if active_lang == "en" else "તપાસી રહ્યું છે...")
         self.lbl_status.setStyleSheet("font-size: 13px; font-weight: bold; color: #1A2521;")
         self.lbl_status.setAlignment(Qt.AlignCenter)
         status_layout.addWidget(self.lbl_status)
@@ -103,12 +106,16 @@ class WhatsAppDialog(QDialog):
         self.success_card.setStyleSheet("background-color: #F0FDF4; border: 2px solid #86EFAC; border-radius: 10px; padding: 16px;")
         succ_layout = QVBoxLayout(self.success_card)
         succ_layout.setSpacing(8)
-        self.lbl_succ_title = QLabel("🎉 WhatsApp સફળતાપૂર્વક જોડાયેલું છે!")
+        self.lbl_succ_title = QLabel("🎉 WhatsApp Connected Successfully!" if active_lang == "en" else "🎉 WhatsApp સફળતાપૂર્વક જોડાયેલું છે!")
         self.lbl_succ_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #166534;")
         self.lbl_succ_title.setAlignment(Qt.AlignCenter)
         succ_layout.addWidget(self.lbl_succ_title)
 
-        self.lbl_succ_desc = QLabel("હવે તમે જે પણ બિલ બનાવશો (Save & Print અથવા Save Without Print),\nતે ગ્રાહક અને પિતાશ્રી બંનેના WhatsApp પર આપોઆપ પહોંચી જશે.")
+        self.lbl_succ_desc = QLabel(
+            "Every invoice generated will be sent directly to the customer and owner's WhatsApp."
+            if active_lang == "en" else
+            "હવે તમે જે પણ બિલ બનાવશો (Save & Print અથવા Save Without Print),\nતે ગ્રાહક અને પિતાશ્રી બંનેના WhatsApp પર આપોઆપ પહોંચી જશે."
+        )
         self.lbl_succ_desc.setStyleSheet("font-size: 12px; color: #14532D; line-height: 1.4;")
         self.lbl_succ_desc.setAlignment(Qt.AlignCenter)
         succ_layout.addWidget(self.lbl_succ_desc)
@@ -124,7 +131,8 @@ class WhatsAppDialog(QDialog):
         tab_code_layout.setContentsMargins(16, 14, 16, 14)
         tab_code_layout.setSpacing(10)
 
-        lbl_code_tip = QLabel("💡 કેમેરા સ્કેન કરવાની જરૂર નથી! ફક્ત તમારો નંબર દાખલ કરી કોડ મેળવો:")
+        tip_msg = "💡 No camera needed! Enter phone number to get 8-digit code:" if active_lang == "en" else "💡 કેમેરા સ્કેન કરવાની જરૂર નથી! ફક્ત તમારો નંબર દાખલ કરી કોડ મેળવો:"
+        lbl_code_tip = QLabel(tip_msg)
         lbl_code_tip.setWordWrap(True)
         lbl_code_tip.setStyleSheet("font-size: 12px; color: #166534; font-weight: bold; background-color: #DCFCE7; padding: 8px; border-radius: 6px;")
         tab_code_layout.addWidget(lbl_code_tip)
@@ -134,7 +142,7 @@ class WhatsAppDialog(QDialog):
         row_phone.setSpacing(8)
         self.txt_pair_phone = QLineEdit()
         self.txt_pair_phone.setMaxLength(10)
-        self.txt_pair_phone.setPlaceholderText("તમારો ૧૦ આંકડાનો WhatsApp નંબર...")
+        self.txt_pair_phone.setPlaceholderText("Your 10-digit WhatsApp number..." if active_lang == "en" else "તમારો ૧૦ આંકડાનો WhatsApp નંબર...")
         self.txt_pair_phone.setStyleSheet("""
             QLineEdit {
                 background: #FFFFFF;
@@ -155,7 +163,7 @@ class WhatsAppDialog(QDialog):
             self.txt_pair_phone.setText(saved_owner)
         row_phone.addWidget(self.txt_pair_phone, stretch=3)
 
-        self.btn_get_code = QPushButton("🔢 કોડ મેળવો (Get Code)")
+        self.btn_get_code = QPushButton(t("wa_btn_get_code"))
         self.btn_get_code.setStyleSheet("""
             QPushButton {
                 background-color: #D4AF37;
@@ -181,7 +189,8 @@ class WhatsAppDialog(QDialog):
         code_box_layout = QVBoxLayout(self.code_box)
         code_box_layout.setSpacing(4)
         
-        self.lbl_code_display = QLabel("ઉપર નંબર લખી 'કોડ મેળવો' બટન દબાવો")
+        code_prompt = "Enter phone number above and click 'Get Code'" if active_lang == "en" else "ઉપર નંબર લખી 'કોડ મેળવો' બટન દબાવો"
+        self.lbl_code_display = QLabel(code_prompt)
         self.lbl_code_display.setAlignment(Qt.AlignCenter)
         self.lbl_code_display.setStyleSheet("font-size: 14px; color: #64748B; font-weight: bold;")
         code_box_layout.addWidget(self.lbl_code_display)
@@ -193,32 +202,37 @@ class WhatsAppDialog(QDialog):
         inst_code_layout = QVBoxLayout(inst_code)
         inst_code_layout.setSpacing(4)
 
-        lbl_ic_title = QLabel("📌 ફોનમાં કોડ દાખલ કરવાની રીત:")
+        if active_lang == "en":
+            lbl_ic_title = QLabel("📌 Steps to enter code on phone:")
+            lbl_s1 = QLabel("1. Open WhatsApp on your phone")
+            lbl_s2 = QLabel("2. Tap menu (⋮) -> Linked Devices")
+            lbl_s3 = QLabel("3. Tap 'Link a Device'")
+            lbl_s4 = QLabel("4. Tap 'Link with phone number instead' at the bottom")
+            lbl_s5 = QLabel("5. Enter your phone number and this 8-digit code. Linked instantly!")
+        else:
+            lbl_ic_title = QLabel("📌 ફોનમાં કોડ દાખલ કરવાની રીત:")
+            lbl_s1 = QLabel("૧. ફોનમાં WhatsApp ખોલો")
+            lbl_s2 = QLabel("૨. જમણી બાજુ ત્રણ ટપકાં (⋮) -> Linked Devices પર જાઓ")
+            lbl_s3 = QLabel("૩. 'Link a Device' દબાવો")
+            lbl_s4 = QLabel("૪. નીચે 'Link with phone number instead' (નંબર વડે લિંક કરો) દબાવો")
+            lbl_s5 = QLabel("૫. તમારો નંબર લખી આ ૮ અક્ષરનો કોડ લખો. તરત કનેક્ટ થઈ જશે!")
+
         lbl_ic_title.setStyleSheet("font-size: 12px; font-weight: bold; color: #1E293B;")
-        inst_code_layout.addWidget(lbl_ic_title)
-
-        lbl_s1 = QLabel("૧. ફોનમાં WhatsApp ખોલો")
         lbl_s1.setStyleSheet("font-size: 11px; color: #334155;")
-        inst_code_layout.addWidget(lbl_s1)
-
-        lbl_s2 = QLabel("૨. જમણી બાજુ ત્રણ ટપકાં (⋮) -> Linked Devices પર જાઓ")
         lbl_s2.setStyleSheet("font-size: 11px; color: #334155;")
-        inst_code_layout.addWidget(lbl_s2)
-
-        lbl_s3 = QLabel("૩. 'Link a Device' દબાવો")
         lbl_s3.setStyleSheet("font-size: 11px; color: #334155;")
-        inst_code_layout.addWidget(lbl_s3)
-
-        lbl_s4 = QLabel("૪. નીચે 'Link with phone number instead' (નંબર વડે લિંક કરો) દબાવો")
         lbl_s4.setStyleSheet("font-size: 11px; color: #0F766E; font-weight: bold;")
-        inst_code_layout.addWidget(lbl_s4)
-
-        lbl_s5 = QLabel("૫. તમારો નંબર લખી આ ૮ અક્ષરનો કોડ લખો. તરત કનેક્ટ થઈ જશે!")
         lbl_s5.setStyleSheet("font-size: 11px; color: #15803D; font-weight: bold;")
+
+        inst_code_layout.addWidget(lbl_ic_title)
+        inst_code_layout.addWidget(lbl_s1)
+        inst_code_layout.addWidget(lbl_s2)
+        inst_code_layout.addWidget(lbl_s3)
+        inst_code_layout.addWidget(lbl_s4)
         inst_code_layout.addWidget(lbl_s5)
 
         tab_code_layout.addWidget(inst_code)
-        self.tabs.addTab(self.tab_code, "🔢 ૮-આંકડાના કોડથી જોડો (સરળ)")
+        self.tabs.addTab(self.tab_code, "🔢 8-digit Pairing Code" if active_lang == "en" else "🔢 ૮-આંકડાના કોડથી જોડો (સરળ)")
 
         # TAB B: QR Code (Crisp, High-Resolution 290x290)
         self.tab_qr = QWidget()
@@ -233,7 +247,7 @@ class WhatsAppDialog(QDialog):
         qr_layout = QVBoxLayout(self.qr_box)
         qr_layout.setContentsMargins(5, 5, 5, 5)
 
-        self.lbl_qr = QLabel("QR કોડ લોડ થઈ રહ્યો છે...")
+        self.lbl_qr = QLabel("Loading QR code..." if active_lang == "en" else "QR કોડ લોડ થઈ રહ્યો છે...")
         self.lbl_qr.setAlignment(Qt.AlignCenter)
         self.lbl_qr.setStyleSheet("color: #6E7A75; font-size: 13px;")
         qr_layout.addWidget(self.lbl_qr)
@@ -241,12 +255,13 @@ class WhatsAppDialog(QDialog):
         tab_qr_layout.addWidget(self.qr_box, alignment=Qt.AlignCenter)
 
         # Quick QR steps
-        inst_qr = QLabel("૧. WhatsApp ખોલો  •  ૨. Linked Devices -> Link a Device  •  ૩. QR સ્કેન કરો")
+        qr_steps_text = "1. Open WhatsApp  •  2. Linked Devices -> Link a Device  •  3. Scan QR Code" if active_lang == "en" else "૧. WhatsApp ખોલો  •  ૨. Linked Devices -> Link a Device  •  ૩. QR સ્કેન કરો"
+        inst_qr = QLabel(qr_steps_text)
         inst_qr.setAlignment(Qt.AlignCenter)
         inst_qr.setStyleSheet("font-size: 11px; color: #166534; font-weight: bold; background-color: #F0FDF4; padding: 6px; border-radius: 6px;")
         tab_qr_layout.addWidget(inst_qr)
 
-        self.tabs.addTab(self.tab_qr, "📷 QR કોડ સ્કેન કરો")
+        self.tabs.addTab(self.tab_qr, "📷 Scan QR Code" if active_lang == "en" else "📷 QR કોડ સ્કેન કરો")
         layout.addWidget(self.tabs)
 
         # 5. Owner / Father's Phone Notification Frame
@@ -256,14 +271,15 @@ class WhatsAppDialog(QDialog):
         owner_layout.setContentsMargins(4, 4, 4, 4)
         owner_layout.setSpacing(6)
 
-        lbl_owner_title = QLabel("👑 પિતાશ્રી / ઓનર વોટ્સએપ કોપી (Owner Copy Alert):")
+        owner_title_text = "👑 Owner / Father's WhatsApp Copy Alert:" if active_lang == "en" else "👑 પિતાશ્રી / ઓનર વોટ્સએપ કોપી (Owner Copy Alert):"
+        lbl_owner_title = QLabel(owner_title_text)
         lbl_owner_title.setStyleSheet("font-weight: bold; color: #0B1E19; font-size: 12px;")
         owner_layout.addWidget(lbl_owner_title)
 
         row_owner = QHBoxLayout()
         self.txt_owner_phone = QLineEdit()
         self.txt_owner_phone.setMaxLength(10)
-        self.txt_owner_phone.setPlaceholderText("પિતાશ્રીનો ૧૦ આંકડાનો મોબાઇલ નંબર...")
+        self.txt_owner_phone.setPlaceholderText("Owner 10-digit mobile number..." if active_lang == "en" else "પિતાશ્રીનો ૧૦ આંકડાનો મોબાઇલ નંબર...")
         self.txt_owner_phone.setStyleSheet("""
             QLineEdit {
                 background: #FFFFFF;
@@ -278,7 +294,7 @@ class WhatsAppDialog(QDialog):
         self.txt_owner_phone.textChanged.connect(self.save_owner_settings)
         row_owner.addWidget(self.txt_owner_phone, stretch=3)
 
-        self.chk_owner_copy = QCheckBox("દરેક બિલ મોકલો")
+        self.chk_owner_copy = QCheckBox("Send every bill copy" if active_lang == "en" else "દરેક બિલ મોકલો")
         self.chk_owner_copy.setStyleSheet("font-size: 12px; font-weight: bold; color: #12382C;")
         self.chk_owner_copy.setChecked(load_settings().get("send_owner_copy", True))
         self.chk_owner_copy.stateChanged.connect(self.save_owner_settings)
@@ -291,14 +307,14 @@ class WhatsAppDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(12)
 
-        self.btn_logout = QPushButton("અનલિંક / Logout")
+        self.btn_logout = QPushButton(t("wa_btn_disconnect"))
         self.btn_logout.setStyleSheet("background-color: #FEE2E2; color: #DC2626; border: 1px solid #FCA5A5; border-radius: 6px; padding: 8px 16px; font-weight: bold;")
         self.btn_logout.setCursor(Qt.PointingHandCursor)
         self.btn_logout.clicked.connect(self.on_logout)
         self.btn_logout.setVisible(False)
         btn_layout.addWidget(self.btn_logout)
 
-        self.btn_close = QPushButton("બંધ કરો (Close)")
+        self.btn_close = QPushButton(t("btn_close"))
         self.btn_close.setStyleSheet("background-color: #12382C; color: #FFFFFF; border: 1.5px solid #D4AF37; border-radius: 6px; padding: 9px 24px; font-weight: bold; font-size: 14px;")
         self.btn_close.setCursor(Qt.PointingHandCursor)
         self.btn_close.clicked.connect(self.accept)
@@ -356,27 +372,31 @@ class WhatsAppDialog(QDialog):
 
         if status == "connected":
             phone_tag = user.get("id", "").split(":")[0] if user else ""
-            self.lbl_status.setText(f"🟢 WhatsApp જોડાયેલ છે! (+{phone_tag})")
+            status_text = f"🟢 WhatsApp Connected! (+{phone_tag})" if active_lang == "en" else f"🟢 WhatsApp જોડાયેલ છે! (+{phone_tag})"
+            self.lbl_status.setText(status_text)
             self.lbl_status.setStyleSheet("font-size: 13px; font-weight: bold; color: #16A34A;")
             self.tabs.setVisible(False)
             self.success_card.setVisible(True)
             self.btn_logout.setVisible(True)
         elif status == "qr_ready" and qr:
-            self.lbl_status.setText("🟡 જોડાવા માટે કોડ અથવા QR કોડ વાપરો")
+            status_text = "🟡 Use pairing code or scan QR to connect" if active_lang == "en" else "🟡 જોડાવા માટે કોડ અથવા QR કોડ વાપરો"
+            self.lbl_status.setText(status_text)
             self.lbl_status.setStyleSheet("font-size: 13px; font-weight: bold; color: #D97706;")
             self.render_qr(qr)
             self.tabs.setVisible(True)
             self.success_card.setVisible(False)
             self.btn_logout.setVisible(False)
         elif status == "connecting":
-            self.lbl_status.setText("⏳ કનેક્શન શરૂ થઈ રહ્યું છે...")
+            status_text = "⏳ Connecting to WhatsApp..." if active_lang == "en" else "⏳ કનેક્શન શરૂ થઈ રહ્યું છે..."
+            self.lbl_status.setText(status_text)
             self.lbl_status.setStyleSheet("font-size: 13px; font-weight: bold; color: #2563EB;")
-            self.lbl_qr.setText("કૃપા કરીને રાહ જુઓ...")
+            self.lbl_qr.setText("Please wait..." if active_lang == "en" else "કૃપા કરીને રાહ જુઓ...")
             self.btn_logout.setVisible(False)
         else:
-            self.lbl_status.setText("🔴 સર્વિસ શરૂ થઈ રહી છે...")
+            status_text = "🔴 Service starting..." if active_lang == "en" else "🔴 સર્વિસ શરૂ થઈ રહી છે..."
+            self.lbl_status.setText(status_text)
             self.lbl_status.setStyleSheet("font-size: 13px; font-weight: bold; color: #DC2626;")
-            self.lbl_qr.setText("સર્વિસ શરૂ થઈ રહી છે...")
+            self.lbl_qr.setText("Starting service..." if active_lang == "en" else "સર્વિસ શરૂ થઈ રહી છે...")
             ensure_bridge_running()
 
     def render_qr(self, qr_data_url: str):
