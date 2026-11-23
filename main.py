@@ -25,6 +25,8 @@ from purchases_view import PurchasesView
 from bill_history_view import BillHistoryView
 from whatsapp_dialog import WhatsAppDialog
 from whatsapp_manager import get_whatsapp_status, ensure_bridge_running
+from rates_manager import get_rates_manager
+from rates_dialog import RatesDialog
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -34,6 +36,12 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1024, 700)
         
         init_db()
+
+        # Initialize & Start Live Bullion Rates Engine
+        self.rates_mgr = get_rates_manager()
+        self.rates_mgr.rates_changed.connect(self.update_rates_ribbon)
+        self.rates_mgr.start()
+
         self.init_ui()
 
         ensure_bridge_running()
@@ -110,6 +118,10 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(self.btn_lang)
 
         main_layout.addWidget(header)
+
+        # Bullion Live Rates Ribbon (Visible seamlessly across Dashboard, Billing & all screens)
+        self.rates_ribbon = self.create_bullion_ribbon()
+        main_layout.addWidget(self.rates_ribbon)
 
         # 2. Body Area (Left Sidebar + Right Stacked Screens)
         body_layout = QHBoxLayout()
@@ -274,6 +286,143 @@ class MainWindow(QMainWindow):
         self.customers_view.retranslate_ui()
         self.ledger_view.retranslate_ui()
         self.bill_history_view.update_translations()
+
+        # 4. Retranslate Bullion Live Rates Ribbon
+        if hasattr(self, 'btn_view_rates'):
+            self.btn_view_rates.setText(t("btn_view_all_rates"))
+            self.update_rates_ribbon(self.rates_mgr.get_latest_rates())
+
+    def create_bullion_ribbon(self) -> QFrame:
+        """
+        Creates a sleek, integrated Bullion Live Rate ribbon across the top.
+        Seamlessly merges into the emerald-gold UI, displaying live prices
+        for 24K, 22K (916), 18K Gold, Silver Lagdi, and live direction indicators.
+        """
+        frame = QFrame()
+        frame.setFixedHeight(38)
+        frame.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #061410, stop:0.5 #0D261E, stop:1 #061410);
+                border-bottom: 1.5px solid #D4AF37;
+            }
+            QLabel {
+                color: #FFFFFF;
+                font-size: 12px;
+                background: transparent;
+            }
+        """)
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(18, 0, 18, 0)
+        layout.setSpacing(14)
+
+        # Status Badge
+        self.lbl_ribbon_status = QLabel("🟢 " + t("lbl_live_market"))
+        self.lbl_ribbon_status.setStyleSheet("font-weight: bold; color: #4ADE80; font-size: 11px; letter-spacing: 0.5px;")
+        layout.addWidget(self.lbl_ribbon_status)
+
+        layout.addWidget(self._make_ribbon_divider())
+
+        # Gold 24K (Pure Bullion)
+        self.lbl_ribbon_g24 = QLabel(f"🟡 {t('rate_ribbon_gold_24k')}: ₹ -- /g")
+        self.lbl_ribbon_g24.setStyleSheet("font-weight: bold; color: #FDE047;")
+        layout.addWidget(self.lbl_ribbon_g24)
+
+        layout.addWidget(self._make_ribbon_divider())
+
+        # Gold 22K (916 Hallmarked Jewellery)
+        self.lbl_ribbon_g22 = QLabel(f"🟠 {t('rate_ribbon_gold_22k')}: ₹ -- /g")
+        self.lbl_ribbon_g22.setStyleSheet("font-weight: bold; color: #FDBA74;")
+        layout.addWidget(self.lbl_ribbon_g22)
+
+        layout.addWidget(self._make_ribbon_divider())
+
+        # Gold 18K
+        self.lbl_ribbon_g18 = QLabel(f"⚪ {t('rate_ribbon_gold_18k')}: ₹ -- /g")
+        self.lbl_ribbon_g18.setStyleSheet("color: #E2E8F0;")
+        layout.addWidget(self.lbl_ribbon_g18)
+
+        layout.addWidget(self._make_ribbon_divider())
+
+        # Silver Lagdi (Fine 999)
+        self.lbl_ribbon_sil = QLabel(f"🪙 {t('rate_ribbon_silver')}: ₹ -- /g")
+        self.lbl_ribbon_sil.setStyleSheet("font-weight: bold; color: #E0E7FF;")
+        layout.addWidget(self.lbl_ribbon_sil)
+
+        layout.addStretch()
+
+        # Update Time
+        self.lbl_ribbon_time = QLabel("🕒 --:--:--")
+        self.lbl_ribbon_time.setStyleSheet("color: #94A3B8; font-size: 11px;")
+        layout.addWidget(self.lbl_ribbon_time)
+
+        # View All Rates Modal Trigger Button
+        self.btn_view_rates = QPushButton(t("btn_view_all_rates"))
+        self.btn_view_rates.setCursor(Qt.PointingHandCursor)
+        self.btn_view_rates.setStyleSheet("""
+            QPushButton {
+                background: #12382C;
+                color: #D4AF37;
+                border: 1px solid #D4AF37;
+                border-radius: 4px;
+                padding: 4px 10px;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: #D4AF37;
+                color: #0B1E19;
+            }
+        """)
+        self.btn_view_rates.clicked.connect(self.open_rates_dialog)
+        layout.addWidget(self.btn_view_rates)
+
+        self.update_rates_ribbon(self.rates_mgr.get_latest_rates())
+        return frame
+
+    def _make_ribbon_divider(self) -> QLabel:
+        div = QLabel("|")
+        div.setStyleSheet("color: #1A3E33; font-weight: bold; font-size: 12px;")
+        return div
+
+    def update_rates_ribbon(self, r: dict):
+        if not r or not hasattr(self, 'lbl_ribbon_g24'):
+            return
+
+        is_live = r.get("status") == "LIVE"
+        self.lbl_ribbon_status.setText("🟢 " + t("lbl_live_market") if is_live else t("lbl_rate_offline"))
+        self.lbl_ribbon_status.setStyleSheet("font-weight: bold; color: #4ADE80; font-size: 11px;" if is_live else "font-weight: bold; color: #FBBF24; font-size: 11px;")
+        self.lbl_ribbon_time.setText(f"🕒 {r.get('timestamp', '--:--:--')}")
+
+        g_dir = r.get("gold_direction", "equal")
+        s_dir = r.get("silver_direction", "equal")
+
+        def arrow_badge(dir_str, chg):
+            if dir_str == "up":
+                return f" <span style='color: #4ADE80; font-size: 11px;'>▲ +₹{abs(chg):.1f}</span>"
+            elif dir_str == "down":
+                return f" <span style='color: #F87171; font-size: 11px;'>▼ -₹{abs(chg):.1f}</span>"
+            return ""
+
+        g24 = r.get("gold_24k_1g", 0)
+        g22 = r.get("gold_22k_1g", 0)
+        g18 = r.get("gold_18k_1g", 0)
+        sil = r.get("silver_lagdi_1g", 0)
+        g_chg = r.get("gold_change", 0)
+        s_chg = r.get("silver_change", 0)
+
+        self.lbl_ribbon_g24.setText(f"🟡 {t('rate_ribbon_gold_24k')}: <b>₹{g24:,.0f}</b>/g{arrow_badge(g_dir, g_chg)}")
+        self.lbl_ribbon_g22.setText(f"🟠 {t('rate_ribbon_gold_22k')}: <b>₹{g22:,.0f}</b>/g{arrow_badge(g_dir, g_chg * 0.9167)}")
+        self.lbl_ribbon_g18.setText(f"⚪ {t('rate_ribbon_gold_18k')}: <b>₹{g18:,.0f}</b>/g{arrow_badge(g_dir, g_chg * 0.75)}")
+        self.lbl_ribbon_sil.setText(f"🪙 {t('rate_ribbon_silver')}: <b>₹{sil:,.1f}</b>/g{arrow_badge(s_dir, s_chg)}")
+
+    def open_rates_dialog(self):
+        dlg = RatesDialog(self)
+        dlg.exec()
+
+    def closeEvent(self, event):
+        if hasattr(self, 'rates_mgr'):
+            self.rates_mgr.stop()
+        super().closeEvent(event)
 
     def on_backup_clicked(self):
         folder = QFileDialog.getExistingDirectory(self, "પેન ડ્રાઈવ અથવા ફોલ્ડર પસંદ કરો (Select Backup Folder)")

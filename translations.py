@@ -73,7 +73,7 @@ TRANSLATIONS = {
         "lbl_item_desc": "વસ્તુની વિગત (દા.ત. લકી HUID સાથે):",
         "lbl_hsn": "H.S.N.:",
         "lbl_weight": "વજન (ગ્રામ):",
-        "lbl_rate": "ભાવ / ૧ ગ્રામ (Rate/g):",
+        "lbl_rate": "ભાવ / ૧ ગ્રામ (₹):",
         "lbl_making": "ઘડામણ (Making Rs):",
         "lbl_apply_gst": "૩% GST ગણો (Apply 3% GST)",
         "lbl_amount": "કુલ રકમ (Total Amount):",
@@ -218,6 +218,31 @@ TRANSLATIONS = {
         "wa_chk_owner_copy": "પિતાશ્રીના WhatsApp પર પણ દરેક બિલની કોપી આપોઆપ મોકલો",
         "wa_lbl_owner_phone": "પિતાશ્રીનો WhatsApp નંબર:",
         "btn_save_settings": "સેટિંગ્સ સેવ કરો",
+        # Live Bullion Rates
+        "btn_live_rate": "⚡ લાઇવ ભાવ",
+        "rate_ribbon_gold_24k": "સોનું ૨૪K",
+        "rate_ribbon_gold_22k": "સોનું ૨૨K (916)",
+        "rate_ribbon_gold_18k": "સોનું ૧૮K",
+        "rate_ribbon_silver": "ચાંદી ૯૯૯",
+        "lbl_live_market": "🟢 લાઈવ બજાર ભાવ",
+        "rate_gold_24k": "સોનાની લગડી (24K)",
+        "rate_gold_22k": "સોનાના દાગીના (22K)",
+        "rate_gold_18k": "૧૮ કેરેટ સોનું",
+        "rate_silver_lagdi": "ચાંદીની લગડી / ચોરસા",
+        "rate_silver_ornaments": "ચાંદીના દાગીના (પાયલ/કડા)",
+        "rate_silver_utensils": "ચાંદીના વાસણ / પૂજા",
+        "rate_gold_coin": "સોનાનો સિક્કો (24K)",
+        "rate_silver_coin": "ચાંદીનો સિક્કો (999)",
+        "btn_view_all_rates": "📋 તમામ ભાવ જુઓ",
+        "dialog_rates_title": "આજના લાઈવ બજાર ભાવ (Live Bullion Rates)",
+        "dialog_rates_sub": "દરેક સેકન્ડે અપડેટ થતા અધિકૃત સોના અને ચાંદીના બજાર ભાવ",
+        "th_rate_product": "વસ્તુ / પ્રોડક્ટ",
+        "th_rate_purity": "શુદ્ધતા (Purity)",
+        "th_rate_per_gram": "ભાવ / ૧ ગ્રામ",
+        "th_rate_bulk": "જથ્થાબંધ ભાવ (10g / 1kg)",
+        "th_rate_movement": "ફેરફાર",
+        "btn_apply_to_bill": "⚡ આ ભાવ બિલમાં લો",
+        "lbl_rate_offline": "🟡 ઓફલાઈન (સંગ્રહિત ભાવ)",
         "lbl_cust_search_urd": "ગ્રાહક શોધો / પસંદ કરો:",
         "lbl_cust_uid": "ગ્રાહક આધાર કાર્ડ નં. (UID):",
         "ph_cust_uid": "૧૨ આંકડાનો આધાર નં. (UID)",
@@ -354,7 +379,7 @@ TRANSLATIONS = {
         "lbl_item_desc": "Description (e.g. Gold Lucky with HUID):",
         "lbl_hsn": "H.S.N.:",
         "lbl_weight": "Weight (g):",
-        "lbl_rate": "Rate / 1 Gram (Rs):",
+        "lbl_rate": "Rate / 1g (₹):",
         "lbl_making": "Making Charge (Rs):",
         "lbl_apply_gst": "Apply 3% GST (1.5%+1.5%)",
         "lbl_amount": "Total Amount (Rs):",
@@ -499,6 +524,31 @@ TRANSLATIONS = {
         "wa_chk_owner_copy": "Automatically send a copy of every invoice to Owner's WhatsApp",
         "wa_lbl_owner_phone": "Owner WhatsApp Phone Number:",
         "btn_save_settings": "Save Settings",
+        # Live Bullion Rates
+        "btn_live_rate": "⚡ Live Rate",
+        "rate_ribbon_gold_24k": "Gold 24K",
+        "rate_ribbon_gold_22k": "Gold 22K (916)",
+        "rate_ribbon_gold_18k": "Gold 18K",
+        "rate_ribbon_silver": "Silver 999",
+        "lbl_live_market": "🟢 LIVE MARKET",
+        "rate_gold_24k": "Gold Lagdi (24K Pure)",
+        "rate_gold_22k": "Gold Ornaments (22K 916)",
+        "rate_gold_18k": "Gold Jewellery (18K)",
+        "rate_silver_lagdi": "Silver Lagdi / Chorsa",
+        "rate_silver_ornaments": "Silver Ornaments (Payal/Kada)",
+        "rate_silver_utensils": "Silver Utensils (Pooja Items)",
+        "rate_gold_coin": "Gold Coin (24K 999)",
+        "rate_silver_coin": "Silver Coin (999 Pure)",
+        "btn_view_all_rates": "📋 View All Rates",
+        "dialog_rates_title": "Today's Live Bullion Rates",
+        "dialog_rates_sub": "Real-time live bullion rates updated every second",
+        "th_rate_product": "Product Name",
+        "th_rate_purity": "Purity",
+        "th_rate_per_gram": "Rate / 1 Gram",
+        "th_rate_bulk": "Bulk Rate (10g / 1kg)",
+        "th_rate_movement": "Movement",
+        "btn_apply_to_bill": "⚡ Use in Bill",
+        "lbl_rate_offline": "🟡 OFFLINE (Cached)",
         "lbl_cust_search_urd": "Search / Select Customer:",
         "lbl_cust_uid": "Customer Aadhaar No. (UID):",
         "ph_cust_uid": "12-digit Aadhaar UID",
@@ -569,6 +619,12 @@ TRANSLATIONS = {
 }
 
 active_lang = "gu"
+
+def get_language() -> str:
+    global active_lang
+    return active_lang
+
+get_current_lang = get_language
 
 def t(key: str) -> str:
     return TRANSLATIONS.get(active_lang, {}).get(key, key)

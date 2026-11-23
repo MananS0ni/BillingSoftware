@@ -17,7 +17,7 @@ from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QColor, QFont
 from datetime import datetime
 
-from translations import t, active_lang
+from translations import t, get_language
 from database import (
     add_purchase, add_urd_purchase, get_purchases, delete_purchase,
     get_purchase_by_id, get_next_urd_voucher_number, get_all_customers
@@ -36,7 +36,8 @@ class AddURDPurchaseDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(t("urd_dialog_window_title"))
-        self.setFixedSize(640, 720)
+        self.resize(680, 740)
+        self.setMinimumWidth(660)
         self.setStyleSheet("""
             QDialog {
                 background-color: #F8F7F4;
@@ -55,9 +56,35 @@ class AddURDPurchaseDialog(QDialog):
                 font-size: 13px;
                 color: #2A1A1A;
             }
+            QPushButton#SecondaryBtn {
+                background-color: #E2E8F0;
+                color: #1E293B;
+                border: 1px solid #CBD5E1;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            QPushButton#SecondaryBtn:hover {
+                background-color: #CBD5E1;
+                color: #0F172A;
+            }
             QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
                 border: 1.5px solid #6B2433;
                 background-color: #FFFAF6;
+            }
+            QPushButton#SecondaryBtn {
+                background-color: #E2E8F0;
+                color: #1E293B;
+                border: 1px solid #CBD5E1;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            QPushButton#SecondaryBtn:hover {
+                background-color: #CBD5E1;
+                color: #0F172A;
             }
         """)
         self.customers_list = get_all_customers()
@@ -165,11 +192,35 @@ class AddURDPurchaseDialog(QDialog):
         wt_row.addWidget(self.lbl_fine_wt)
         form.addRow(t("lbl_gross_touch"), wt_row)
 
-        # 7. Buy Rate per Gram
+        # 7. Buy Rate per Gram with 1-Click Live Market Auto-Fill
+        rate_row = QHBoxLayout()
         self.txt_rate = QLineEdit()
         self.txt_rate.setPlaceholderText(t("ph_buy_rate"))
         self.txt_rate.textChanged.connect(self.calculate_totals)
-        form.addRow(t("lbl_buy_rate_colon"), self.txt_rate)
+
+        self.btn_live_rate = QPushButton(t("btn_live_rate"))
+        self.btn_live_rate.setCursor(Qt.PointingHandCursor)
+        self.btn_live_rate.setToolTip("Click to calculate live rate from today's bullion market based on purity touch")
+        self.btn_live_rate.setStyleSheet("""
+            QPushButton {
+                background: #FEF3C7;
+                color: #92400E;
+                font-size: 11px;
+                font-weight: bold;
+                border: 1.2px solid #F59E0B;
+                padding: 5px 10px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background: #FDE68A;
+                color: #78350F;
+            }
+        """)
+        self.btn_live_rate.clicked.connect(self.apply_live_buy_rate)
+
+        rate_row.addWidget(self.txt_rate, stretch=3)
+        rate_row.addWidget(self.btn_live_rate, stretch=1)
+        form.addRow(t("lbl_buy_rate_colon"), rate_row)
 
         # 8. GST Rate & Treatment
         gst_row = QHBoxLayout()
@@ -234,7 +285,7 @@ class AddURDPurchaseDialog(QDialog):
 
         self.btn_save_print = QPushButton(t("btn_save_and_print_voucher"))
         self.btn_save_print.setObjectName("GoldActionBtn")
-        self.btn_save_print.setStyleSheet("background-color: #6B2433; color: #FFFFFF; font-weight: bold; padding: 8px 16px; border-radius: 4px;")
+        self.btn_save_print.setStyleSheet("background-color: #6B2433; color: #FFFFFF; font-weight: bold; padding: 8px 14px; border-radius: 4px;")
         self.btn_save_print.clicked.connect(lambda: self.save(print_voucher=True))
 
         btns.addWidget(self.btn_cancel)
@@ -242,6 +293,22 @@ class AddURDPurchaseDialog(QDialog):
         btns.addWidget(self.btn_save_only)
         btns.addWidget(self.btn_save_print)
         main_layout.addLayout(btns)
+
+    def apply_live_buy_rate(self):
+        try:
+            from rates_manager import get_rates_manager
+            rm = get_rates_manager()
+            rates = rm.get_latest_rates()
+            desc = (self.txt_desc.text() or "").lower()
+            if any(w in desc for w in ["silver", "ચાંદી", "chandi", "payal", "પાયલ"]):
+                base_rate = rates.get("silver_lagdi_1g", 92.0)
+            else:
+                base_rate = rates.get("gold_24k_1g", 7650.0)
+            touch = float(self.txt_touch.text().strip() or 100.0)
+            calc_rate = round(base_rate * (touch / 100.0), 2)
+            self.txt_rate.setText(str(calc_rate))
+        except Exception:
+            pass
 
     def on_customer_selected(self, index):
         data = self.cmb_customer.currentData()
@@ -287,11 +354,11 @@ class AddURDPurchaseDialog(QDialog):
         voucher_no = self.txt_voucher.text().strip()
 
         if not cust_name:
-            err = "Please enter customer name." if active_lang == "en" else "કૃપા કરીને ગ્રાહકનું નામ દાખલ કરો."
+            err = "Please enter customer name." if get_language() == "en" else "કૃપા કરીને ગ્રાહકનું નામ દાખલ કરો."
             QMessageBox.warning(self, "Attention", err)
             return
         if not desc:
-            err = "Please enter old gold / item description." if active_lang == "en" else "કૃપા કરીને જૂના સોના / વસ્તુની વિગત દાખલ કરો."
+            err = "Please enter old gold / item description." if get_language() == "en" else "કૃપા કરીને જૂના સોના / વસ્તુની વિગત દાખલ કરો."
             QMessageBox.warning(self, "Attention", err)
             return
 
@@ -302,7 +369,7 @@ class AddURDPurchaseDialog(QDialog):
             if wt <= 0 or rate <= 0:
                 raise ValueError
         except Exception:
-            err = "Please enter valid weight and rate." if active_lang == "en" else "કૃપા કરીને સાચું વજન અને ભાવ દાખલ કરો."
+            err = "Please enter valid weight and rate." if get_language() == "en" else "કૃપા કરીને સાચું વજન અને ભાવ દાખલ કરો."
             QMessageBox.warning(self, "Attention", err)
             return
 
@@ -370,6 +437,19 @@ class AddPurchaseDialog(QDialog):
                 font-size: 13px;
                 color: #2A1A1A;
             }
+            QPushButton#SecondaryBtn {
+                background-color: #E2E8F0;
+                color: #1E293B;
+                border: 1px solid #CBD5E1;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            QPushButton#SecondaryBtn:hover {
+                background-color: #CBD5E1;
+                color: #0F172A;
+            }
         """)
         self.init_ui()
 
@@ -412,10 +492,32 @@ class AddPurchaseDialog(QDialog):
         self.txt_weight.textChanged.connect(self.calculate_totals)
         form.addRow(t("th_weight"), self.txt_weight)
 
+        rate_row = QHBoxLayout()
         self.txt_rate = QLineEdit()
         self.txt_rate.setPlaceholderText("74500")
         self.txt_rate.textChanged.connect(self.calculate_totals)
-        form.addRow(t("th_rate"), self.txt_rate)
+
+        self.btn_live_rate = QPushButton(t("btn_live_rate"))
+        self.btn_live_rate.setCursor(Qt.PointingHandCursor)
+        self.btn_live_rate.setStyleSheet("""
+            QPushButton {
+                background: #FEF3C7;
+                color: #92400E;
+                font-size: 11px;
+                font-weight: bold;
+                border: 1.2px solid #F59E0B;
+                padding: 5px 10px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background: #FDE68A;
+                color: #78350F;
+            }
+        """)
+        self.btn_live_rate.clicked.connect(self.apply_live_dealer_rate)
+        rate_row.addWidget(self.txt_rate, stretch=3)
+        rate_row.addWidget(self.btn_live_rate, stretch=1)
+        form.addRow(t("th_rate"), rate_row)
 
         # GST Rate Selector
         self.cmb_gst = QComboBox()
@@ -469,6 +571,22 @@ class AddPurchaseDialog(QDialog):
         btns.addWidget(self.btn_save)
         layout.addLayout(btns)
 
+    def apply_live_dealer_rate(self):
+        try:
+            from rates_manager import get_rates_manager
+            rm = get_rates_manager()
+            desc = (self.txt_desc.text() or "").lower()
+            rates = rm.get_latest_rates()
+            if any(w in desc for w in ["silver", "ચાંદી", "chandi"]):
+                rate = rates.get("silver_lagdi_1g", 92.0)
+            elif any(w in desc for w in ["22k", "૨૨k", "916"]):
+                rate = rates.get("gold_22k_1g", 7013.0)
+            else:
+                rate = rates.get("gold_24k_1g", 7650.0)
+            self.txt_rate.setText(str(rate))
+        except Exception:
+            pass
+
     def calculate_totals(self):
         try:
             wt = float(self.txt_weight.text().strip() or 0)
@@ -490,7 +608,7 @@ class AddPurchaseDialog(QDialog):
         desc = self.txt_desc.text().strip()
 
         if not supplier or not inv_no or not desc:
-            err = "Please enter supplier name, invoice no, and description." if active_lang == "en" else "કૃપા કરીને વેપારીનું નામ, બિલ નં. અને વસ્તુની વિગત દાખલ કરો."
+            err = "Please enter supplier name, invoice no, and description." if get_language() == "en" else "કૃપા કરીને વેપારીનું નામ, બિલ નં. અને વસ્તુની વિગત દાખલ કરો."
             QMessageBox.warning(self, "Attention", err)
             return
 
@@ -500,7 +618,7 @@ class AddPurchaseDialog(QDialog):
             if wt <= 0 or rate <= 0:
                 raise ValueError
         except Exception:
-            err = "Please enter valid weight and rate." if active_lang == "en" else "કૃપા કરીને સાચું વજન અને ભાવ દાખલ કરો."
+            err = "Please enter valid weight and rate." if get_language() == "en" else "કૃપા કરીને સાચું વજન અને ભાવ દાખલ કરો."
             QMessageBox.warning(self, "Attention", err)
             return
 

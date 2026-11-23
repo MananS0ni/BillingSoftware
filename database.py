@@ -7,6 +7,8 @@ Includes analytics for the Executive Dashboard.
 import sqlite3
 import os
 import shutil
+import re
+import json
 from datetime import datetime
 from typing import List, Dict, Optional
 
@@ -129,6 +131,14 @@ def init_db():
             c.execute(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_type};")
         except:
             pass
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS rates_cache (
+            key TEXT PRIMARY KEY,
+            data_json TEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
 
     conn.commit()
     conn.close()
@@ -671,3 +681,49 @@ def get_all_bills_history(start_date: str = None, end_date: str = None, keyword:
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
     return rows
+
+# ----------------- Bullion Live Rates Cache -----------------
+
+def save_cached_rates(rates_dict: dict):
+    """Persists the latest live rates JSON to SQLite for instant offline recovery."""
+    import json
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS rates_cache (
+            key TEXT PRIMARY KEY,
+            data_json TEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    c.execute("""
+        INSERT INTO rates_cache (key, data_json, updated_at)
+        VALUES ('LATEST_BULLION_RATES', ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(key) DO UPDATE SET
+            data_json = excluded.data_json,
+            updated_at = CURRENT_TIMESTAMP;
+    """, (json.dumps(rates_dict),))
+    conn.commit()
+    conn.close()
+
+def get_cached_rates() -> Optional[Dict]:
+    """Retrieves the last known bullion rates from SQLite cache."""
+    import json
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS rates_cache (
+                key TEXT PRIMARY KEY,
+                data_json TEXT NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        c.execute("SELECT data_json FROM rates_cache WHERE key = 'LATEST_BULLION_RATES';")
+        row = c.fetchone()
+        conn.close()
+        if row and row["data_json"]:
+            return json.loads(row["data_json"])
+    except Exception:
+        pass
+    return None

@@ -179,12 +179,36 @@ class BillingView(QWidget):
         item_grid.addWidget(self.lbl_form_wt, 2, 0)
         item_grid.addWidget(self.txt_weight, 3, 0)
 
+        rate_hdr_box = QHBoxLayout()
         self.lbl_form_rate = QLabel(t("lbl_rate"))
         self.lbl_form_rate.setProperty("class", "FormLabel")
+        self.btn_live_rate = QPushButton(t("btn_live_rate"))
+        self.btn_live_rate.setCursor(Qt.PointingHandCursor)
+        self.btn_live_rate.setStyleSheet("""
+            QPushButton {
+                background: #FEF3C7;
+                color: #92400E;
+                font-size: 11px;
+                font-weight: bold;
+                border: 1px solid #F59E0B;
+                padding: 1px 6px;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background: #FDE68A;
+                color: #78350F;
+            }
+        """)
+        self.btn_live_rate.setToolTip("Click to populate live market rate for this item")
+        self.btn_live_rate.clicked.connect(self.apply_live_item_rate)
+        rate_hdr_box.addWidget(self.lbl_form_rate)
+        rate_hdr_box.addStretch()
+        rate_hdr_box.addWidget(self.btn_live_rate)
+
         self.txt_rate = QLineEdit()
         self.txt_rate.setPlaceholderText("e.g. 7300")
         self.txt_rate.textChanged.connect(self.calculate_row_amount)
-        item_grid.addWidget(self.lbl_form_rate, 2, 1)
+        item_grid.addLayout(rate_hdr_box, 2, 1)
         item_grid.addWidget(self.txt_rate, 3, 1)
 
         self.lbl_form_making = QLabel(t("lbl_making"))
@@ -503,6 +527,19 @@ class BillingView(QWidget):
             self.txt_payment_ref.setVisible(False)
             self.txt_payment_ref.clear()
 
+    def apply_live_item_rate(self):
+        try:
+            from rates_manager import get_rates_manager
+            rm = get_rates_manager()
+            desc = self.txt_item_desc.text().strip()
+            hsn = self.get_selected_hsn()
+            rate = rm.get_rate_by_item(desc, hsn)
+            if rate > 0:
+                self.txt_rate.setText(str(rate))
+                self.calculate_row_amount()
+        except Exception:
+            pass
+
     def calculate_row_amount(self):
         try:
             wt = float(self.txt_weight.text() or 0)
@@ -781,6 +818,7 @@ class BillingView(QWidget):
         self.lbl_form_wt.setText(t("lbl_weight"))
         self.txt_weight.setPlaceholderText(t("ph_item_wt"))
         self.lbl_form_rate.setText(t("lbl_rate"))
+        self.btn_live_rate.setText(t("btn_live_rate"))
         self.txt_rate.setPlaceholderText(t("ph_item_rate"))
         self.lbl_form_making.setText(t("lbl_making"))
         self.txt_making.setPlaceholderText("e.g. 2000")
