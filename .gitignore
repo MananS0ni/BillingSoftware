@@ -30,3 +30,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# Bug 20 fix: settings.json contains owner phone + GSTIN — never commit to git
+settings.json

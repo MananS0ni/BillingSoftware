@@ -21,6 +21,24 @@ PAIRING_URL = "http://127.0.0.1:5001/request-pairing-code"
 
 bridge_process = None
 
+def stop_bridge():
+    """
+    Terminates the locally-started Node.js WhatsApp bridge process on app exit.
+    Call this from the main window's closeEvent so the port is freed cleanly.
+    """
+    global bridge_process
+    if bridge_process is not None:
+        try:
+            bridge_process.terminate()
+            try:
+                bridge_process.wait(timeout=3)
+            except Exception:
+                bridge_process.kill()
+        except Exception as e:
+            print(f"[WhatsApp Manager] Could not stop bridge: {e}")
+        bridge_process = None
+
+
 def is_bridge_running() -> bool:
     """Checks if the local WhatsApp bridge HTTP service is answering."""
     try:

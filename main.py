@@ -24,7 +24,7 @@ from billing_view import BillingView
 from purchases_view import PurchasesView
 from bill_history_view import BillHistoryView
 from whatsapp_dialog import WhatsAppDialog
-from whatsapp_manager import get_whatsapp_status, ensure_bridge_running
+from whatsapp_manager import get_whatsapp_status, ensure_bridge_running, stop_bridge
 from rates_manager import get_rates_manager
 from rates_dialog import RatesDialog
 
@@ -422,6 +422,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         if hasattr(self, 'rates_mgr'):
             self.rates_mgr.stop()
+        stop_bridge()  # Bug 14 fix: cleanly kill Node.js WhatsApp bridge on exit
         super().closeEvent(event)
 
     def on_backup_clicked(self):

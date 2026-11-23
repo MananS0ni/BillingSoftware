@@ -557,14 +557,35 @@ class BillingView(QWidget):
             QMessageBox.warning(self, "Attention", t("msg_add_item_first"))
             return
 
+        # Bug 8 fix: Validate numbers strictly — reject nan, inf, negative, zero weight
         try:
-            wt = float(self.txt_weight.text() or 0)
-            rate = float(self.txt_rate.text() or 0)
-            making = float(self.txt_making.text() or 0)
-            amt = float(self.txt_amount.text())
-        except:
-            QMessageBox.warning(self, "Attention", "Please enter valid numbers.")
+            wt = float(self.txt_weight.text() or "0")
+            rate = float(self.txt_rate.text() or "0")
+            making = float(self.txt_making.text() or "0")
+        except ValueError:
+            QMessageBox.warning(self, "અમાન્ય સંખ્યા / Invalid Number",
+                                "વજન, ભાવ અને ઘડામણ માત્ર સંખ્યા જ હોવા જોઈએ.\n"
+                                "Weight, Rate and Making must be valid numbers.")
             return
+
+        import math
+        if math.isnan(wt) or math.isinf(wt) or wt <= 0:
+            QMessageBox.warning(self, "અમાન્ય વજન / Invalid Weight",
+                                "વજન શૂન્ય અથવા ઋણ ન હોઈ શકે. / Weight must be greater than zero.")
+            self.txt_weight.setFocus()
+            return
+        if math.isnan(rate) or math.isinf(rate) or rate < 0:
+            QMessageBox.warning(self, "અમાન્ય ભાવ / Invalid Rate",
+                                "ભાવ ઋણ ન હોઈ શકે. / Rate cannot be negative.")
+            self.txt_rate.setFocus()
+            return
+        if math.isnan(making) or math.isinf(making) or making < 0:
+            QMessageBox.warning(self, "અમાન્ય ઘડામણ / Invalid Making",
+                                "ઘડામણ ઋણ ન હોઈ શકે. / Making charge cannot be negative.")
+            self.txt_making.setFocus()
+            return
+
+        amt = round((wt * rate) + making, 2)
 
         hsn_code = self.get_selected_hsn()
         item_dict = {
@@ -586,20 +607,38 @@ class BillingView(QWidget):
         self.table_items.setItem(row, 4, QTableWidgetItem(format_inr(making)))
         self.table_items.setItem(row, 5, QTableWidgetItem(format_inr(amt)))
 
+        # Bug 3 fix: ❌ button uses a closure over `row` captured at add time.
+        # After rows are removed, indices shift. Fix: always look up the button's
+        # actual current row via indexAt rather than the stale closure variable.
         btn_del = QPushButton("❌")
         btn_del.setMaximumWidth(40)
-        btn_del.clicked.connect(lambda _, r=row: self.remove_item(r))
+        btn_del.clicked.connect(self._make_remove_handler(btn_del))
         self.table_items.setCellWidget(row, 6, btn_del)
 
         self.txt_item_desc.clear()
         self.txt_weight.clear()
         self.txt_making.clear()
         self.txt_amount.clear()
-        self.cmb_hsn.setCurrentIndex(0)  # Reset to default 7113
+        self.cmb_hsn.setCurrentIndex(0)
         self.txt_item_desc.setFocus()
         self.update_totals_display()
 
+    def _make_remove_handler(self, btn):
+        """Returns a slot that finds the button's current row at click-time, not add-time."""
+        def _handler():
+            # Find which row currently contains this button widget
+            for r in range(self.table_items.rowCount()):
+                w = self.table_items.cellWidget(r, 6)
+                if w is btn:
+                    if r < len(self.items_data):
+                        self.items_data.pop(r)
+                    self.table_items.removeRow(r)
+                    self.update_totals_display()
+                    return
+        return _handler
+
     def remove_item(self, row):
+        """Legacy fallback — kept for safety."""
         if row < len(self.items_data):
             self.items_data.pop(row)
             self.table_items.removeRow(row)
@@ -640,16 +679,16 @@ class BillingView(QWidget):
         cust_phone = self.txt_cust_phone.text().strip()
         cust_name = self.txt_cust_name.text().strip() or "Customer"
 
-        # Input Validation: Must be exactly 10 digits
         if len(cust_phone) != 10 or not cust_phone.isdigit():
             if len(cust_phone) < 10:
                 QMessageBox.warning(
-                    self, "Invalid Mobile Number (અમાન્ય મોબાઇલ નંબર)", 
-                    f"મોબાઇલ નંબરમાં માત્ર {len(cust_phone)} આંકડા છે.\nકૃપા કરીને બરાબર ૧૦ આંકડાનો નંબર દાખલ કરો.\n(Mobile number has only {len(cust_phone)} digits. Please enter exactly 10 digits)."
+                    self, "Invalid Mobile Number (અમાન્ય મોબાઇલ નંબર)",
+                    f"મોબાઇલ નંબરમાં માત્ર {len(cust_phone)} આંકડા છે.\nકૃપા કરીને બરાબર ૧૦ આંકડાનો નંબર દાખલ કરો.\n"
+                    f"(Mobile number has only {len(cust_phone)} digits. Please enter exactly 10 digits)."
                 )
             else:
                 QMessageBox.warning(
-                    self, "Invalid Mobile Number (અમાન્ય મોબાઇલ નંબર)", 
+                    self, "Invalid Mobile Number (અમાન્ય મોબાઇલ નંબર)",
                     "કૃપા કરીને બરાબર ૧૦ આંકડાનો સાચો મોબાઇલ નંબર દાખલ કરો.\n(Please enter exactly 10 digits)."
                 )
             self.txt_cust_phone.setFocus()
@@ -659,58 +698,85 @@ class BillingView(QWidget):
         aadhaar_val = self.txt_cust_aadhaar.text().strip()
         ref_val = self.txt_payment_ref.text().strip()
 
-        # Safety Check: Verify that selected_customer matches the entered 10-digit mobile number
+        # Bug 17 fix: Save a fixed payment mode string regardless of UI language
+        mode_text = self.cmb_mode.currentText()
+        if "CREDIT" in mode_text.upper() or "UDHAR" in mode_text.upper():
+            payment_mode = "CREDIT"
+        elif "UPI" in mode_text.upper():
+            payment_mode = "UPI"
+        elif "CHEQUE" in mode_text.upper() or "CHECK" in mode_text.upper():
+            payment_mode = "CHEQUE"
+        else:
+            payment_mode = "CASH"
+
+        # Safety: verify selected_customer mobile still matches
         if self.selected_customer and self.selected_customer.get("mobile") != cust_phone:
             self.selected_customer = None
 
-        if not self.selected_customer:
-            # Check if an exact customer already exists with this exact 10-digit mobile
-            existing_c = get_customer_by_mobile(cust_phone)
-            if existing_c:
-                cust_id = existing_c["id"]
+        # Bug 5 fix: Resolve/create customer BEFORE the bill transaction begins
+        try:
+            if not self.selected_customer:
+                existing_c = get_customer_by_mobile(cust_phone)
+                if existing_c:
+                    cust_id = existing_c["id"]
+                else:
+                    cust_id = add_customer(
+                        name_gu=cust_name, mobile=cust_phone,
+                        address=self.txt_cust_address.text().strip(),
+                        pan_no=pan_val, aadhaar_no=aadhaar_val
+                    )
             else:
-                cust_id = add_customer(
-                    name_gu=cust_name, mobile=cust_phone,
-                    address=self.txt_cust_address.text().strip(),
-                    pan_no=pan_val, aadhaar_no=aadhaar_val
-                )
-        else:
-            cust_id = self.selected_customer["id"]
+                cust_id = self.selected_customer["id"]
+        except Exception as e:
+            QMessageBox.critical(self, "Database Error", f"ગ્રાહક સેવ કરવામાં ભૂલ:\n{e}")
+            return
 
         try:
-            paid_rs = float(self.txt_paid.text() or 0)
-        except:
+            paid_rs = float(self.txt_paid.text() or "0")
+        except ValueError:
             paid_rs = 0.0
 
         paid_paise = int(round(paid_rs * 100))
-        mode = self.cmb_mode.currentText().split()[0]
         today = datetime.now().strftime("%Y-%m-%d")
+        apply_gst = self.chk_apply_gst.isChecked()  # Bug 1 fix: pass GST flag to DB
 
-        bill_id = create_bill(
-            customer_id=cust_id,
-            bill_date=today,
-            items=self.items_data,
-            paid_paise=paid_paise,
-            payment_mode=mode,
-            payment_ref=ref_val
-        )
-
-        subtotal = sum(i["amount_paise"] for i in self.items_data)
-        if self.chk_apply_gst.isChecked():
-            cgst = round(subtotal * 0.015)
-            sgst = round(subtotal * 0.015)
+        # Compute totals consistently with what DB will store
+        subtotal_paise = sum(i["amount_paise"] for i in self.items_data)
+        if apply_gst:
+            cgst_paise = round(subtotal_paise * 0.015)
+            sgst_paise = round(subtotal_paise * 0.015)
         else:
-            cgst = 0
-            sgst = 0
-        grand = subtotal + cgst + sgst
-        due = max(0, grand - paid_paise)
+            cgst_paise = 0
+            sgst_paise = 0
+        grand_total_paise = subtotal_paise + cgst_paise + sgst_paise
+        balance_paise = max(0, grand_total_paise - paid_paise)
+
+        # Bug 5 fix: Bill creation is now atomic inside create_bill (try/rollback/raise)
+        try:
+            bill_id = create_bill(
+                customer_id=cust_id,
+                bill_date=today,
+                items=self.items_data,
+                paid_paise=paid_paise,
+                payment_mode=payment_mode,
+                payment_ref=ref_val,
+                apply_gst=apply_gst  # Bug 1 fix
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Database Error", f"બિલ સેવ કરવામાં ભૂલ:\n{e}")
+            return
+
+        # Bug 6 fix: Fetch actual bill_no from the saved record — not get_next_bill_number()-1
+        from database import get_bill_full_details
+        saved_bill = get_bill_full_details(bill_id)
+        actual_bill_no = saved_bill["bill_no"] if saved_bill else bill_id
 
         closing_bal = get_customer_balance(cust_id)
-        opening_bal = closing_bal - due
+        opening_bal = closing_bal - balance_paise
         cust_gstin_val = self.selected_customer.get("gstin", "") if self.selected_customer else ""
 
         bill_data = {
-            "bill_no": get_next_bill_number() - 1,
+            "bill_no": actual_bill_no,          # Bug 6 fix
             "book_no": 1,
             "bill_date": today,
             "customer_name": cust_name,
@@ -720,77 +786,89 @@ class BillingView(QWidget):
             "pan_no": pan_val,
             "aadhaar_no": aadhaar_val,
             "items": self.items_data,
-            "subtotal_paise": subtotal,
-            "cgst_paise": cgst,
-            "sgst_paise": sgst,
-            "grand_total_paise": grand,
+            "subtotal_paise": subtotal_paise,
+            "cgst_paise": cgst_paise,           # Bug 1 fix: 0 when GST unchecked
+            "sgst_paise": sgst_paise,
+            "grand_total_paise": grand_total_paise,
             "paid_paise": paid_paise,
-            "balance_paise": due,
-            "payment_mode": mode,
+            "balance_paise": balance_paise,
+            "payment_mode": payment_mode,
             "payment_ref": ref_val,
             "opening_balance_paise": opening_bal,
             "closing_balance_paise": closing_bal
         }
 
-        # 1. Automatically export PDF to dedicated invoices folder
+        # Export PDF
         invoices_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "invoices")
         os.makedirs(invoices_dir, exist_ok=True)
         safe_name = re.sub(r'[^a-zA-Z0-9_\u0A80-\u0AFF]', '_', cust_name)
-        pdf_filename = f"Invoice_Bill_{bill_data['bill_no']}_{safe_name}.pdf"
+        pdf_filename = f"Invoice_Bill_{actual_bill_no}_{safe_name}.pdf"
         pdf_path = os.path.join(invoices_dir, pdf_filename)
-        export_bill_to_pdf(bill_data, pdf_path)
+        try:
+            export_bill_to_pdf(bill_data, pdf_path)
+        except Exception as e:
+            QMessageBox.warning(self, "PDF Error", f"PDF બનાવવામાં ભૂલ:\n{e}")
+            pdf_path = None
 
-        # 2. Automated Silent WhatsApp Dispatch to Customer & Father
-        grand_fmt = format_inr(grand, is_paise=True)
+        # Bug 15 fix: Ask before sending WhatsApp — no silent auto-dispatch
+        grand_fmt = format_inr(grand_total_paise, is_paise=True)
         paid_fmt = format_inr(paid_paise, is_paise=True)
-        due_fmt = format_inr(due, is_paise=True)
+        due_fmt = format_inr(balance_paise, is_paise=True)
 
-        wa_msg = (
-            f"નમસ્તે {cust_name} શેઠ,\n\n"
-            f"આપનું સોની નટવરલાલ હિંમતલાલ (Soni Natvarlal Himmatlal) નું ટેક્સ ઇન્વોઇસ નં. #{bill_data['bill_no']} સામેલ છે.\n\n"
-            f"🧾 બિલ નં.: #{bill_data['bill_no']}\n"
-            f"📅 તારીખ: {today}\n"
-            f"💎 કુલ રકમ: {grand_fmt}\n"
-            f"💵 જમા આપ્યા: {paid_fmt}\n"
-            f"⚖️ બાકી ઉધાર: {due_fmt}\n\n"
-            f"આપનું ડિજિટલ ઇનવોઇસ PDF આ સાથે સામેલ છે.\n"
-            f"આપની મુલાકાત બદલ ખૂબ ખૂબ આભાર! 🙏\n\n"
-            f"સોની નટવરલાલ હિંમતલાલ\n"
-            f"Soni Natvarlal Himmatlal"
-        )
-
-        wa_status = get_whatsapp_status()
         wa_notice = ""
+        wa_status = get_whatsapp_status()
         if wa_status.get("status") == "connected":
-            send_bill_async(cust_phone, message=wa_msg, pdf_path=pdf_path)
-            wa_notice = f"\n\n📲 {t('msg_wa_sent')} (+91 {cust_phone})"
-
-            # Send copy to Father's phone if enabled
-            owner_phone = get_owner_phone()
-            if is_owner_copy_enabled() and owner_phone:
-                ref_tag = f" ({ref_val})" if ref_val else ""
-                owner_msg = (
-                    f"👑 [સોની નટવરલાલ હિંમતલાલ - બિલ એલર્ટ #{bill_data['bill_no']}]\n\n"
-                    f"🧾 બિલ નં.: #{bill_data['bill_no']}\n"
+            reply = QMessageBox.question(
+                self,
+                "WhatsApp મોકલવું? / Send WhatsApp?",
+                f"ગ્રાહક {cust_name} (+91 {cust_phone}) ને WhatsApp ઇન્વોઇસ મોકલવું?\n"
+                f"Send WhatsApp invoice to {cust_name} (+91 {cust_phone})?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes
+            )
+            if reply == QMessageBox.Yes:
+                wa_msg = (
+                    f"નમસ્તે {cust_name} શેઠ,\n\n"
+                    f"આપનું સોની નટવરલાલ હિંમતલાલ (Soni Natvarlal Himmatlal) નું ટેક્સ ઇન્વોઇસ નં. #{actual_bill_no} સામેલ છે.\n\n"
+                    f"🧾 બિલ નં.: #{actual_bill_no}\n"
                     f"📅 તારીખ: {today}\n"
-                    f"👤 ગ્રાહક: {cust_name} ({cust_phone})\n"
                     f"💎 કુલ રકમ: {grand_fmt}\n"
-                    f"💵 જમા લીધા: {paid_fmt} [{mode}{ref_tag}]\n"
+                    f"💵 જમા આપ્યા: {paid_fmt}\n"
                     f"⚖️ બાકી ઉધાર: {due_fmt}\n\n"
-                    f"📄 ગ્રાહકનું પાકું PDF ઇનવોઇસ આ સાથે સામેલ છે."
+                    f"આપનું ડિજિટલ ઇનવોઇસ PDF આ સાથે સામેલ છે.\n"
+                    f"આપની મુલાકાત બદલ ખૂબ ખૂબ આભાર! 🙏\n\n"
+                    f"સોની નટવરલાલ હિંમતલાલ\nSoni Natvarlal Himmatlal"
                 )
-                send_bill_async(owner_phone, message=owner_msg, pdf_path=pdf_path)
-                wa_notice += f"\n👑 પિતાશ્રીના WhatsApp પર કોપી મોકલાઈ ગઈ (+91 {owner_phone})"
+                if pdf_path:
+                    send_bill_async(cust_phone, message=wa_msg, pdf_path=pdf_path)
+                wa_notice = f"\n\n📲 {t('msg_wa_sent')} (+91 {cust_phone})"
+
+                owner_phone = get_owner_phone()
+                if is_owner_copy_enabled() and owner_phone:
+                    ref_tag = f" ({ref_val})" if ref_val else ""
+                    owner_msg = (
+                        f"👑 [સોની નટવરલાલ હિંમતલાલ - બિલ એલર્ટ #{actual_bill_no}]\n\n"
+                        f"🧾 બિલ નં.: #{actual_bill_no}\n"
+                        f"📅 તારીખ: {today}\n"
+                        f"👤 ગ્રાહક: {cust_name} ({cust_phone})\n"
+                        f"💎 કુલ રકમ: {grand_fmt}\n"
+                        f"💵 જમા લીધા: {paid_fmt} [{payment_mode}{ref_tag}]\n"
+                        f"⚖️ બાકી ઉધાર: {due_fmt}\n\n"
+                        f"📄 ગ્રાહકનું પાકું PDF ઇન્વોઇસ આ સાથે સામેલ છે."
+                    )
+                    if pdf_path:
+                        send_bill_async(owner_phone, message=owner_msg, pdf_path=pdf_path)
+                    wa_notice += f"\n👑 પિતાશ્રીના WhatsApp પર કોપી મોકલાઈ ગઈ (+91 {owner_phone})"
         else:
             wa_notice = f"\n\n⚠️ {t('msg_wa_not_linked')}"
 
-        # 3. Print or Save Only
-        if with_print:
+        # Print or just confirm
+        if with_print and pdf_path:
             print_or_pdf_bill(bill_data, self)
         else:
             QMessageBox.information(
                 self, t("msg_saved_success"),
-                f"{t('msg_bill_saved_success')}\n\nબિલ નં. / Bill #{bill_data['bill_no']}\nકુલ રકમ / Total: {grand_fmt}{wa_notice}"
+                f"{t('msg_bill_saved_success')}\n\nબિલ નં. / Bill #{actual_bill_no}\nકુલ રકમ / Total: {grand_fmt}{wa_notice}"
             )
 
         self.reset_form()

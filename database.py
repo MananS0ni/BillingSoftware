@@ -143,9 +143,10 @@ def init_db():
     conn.commit()
     conn.close()
 
-    # Automatically ensure historical ledger data is 100% accurate
+    # Run one-time legacy data migration ONLY if not already completed.
+    # This prevents overwriting any manual corrections made after first run.
     try:
-        migrate_ledger_records()
+        _run_one_time_ledger_migration()
     except Exception as e:
         print(f"[DB] Migration warning: {e}")
 
@@ -294,52 +295,74 @@ def get_bill_full_details(bill_id: int) -> Optional[Dict]:
     conn.close()
     return bill_dict
 
-def create_bill(customer_id: int, bill_date: str, items: List[Dict], paid_paise: int, payment_mode: str = "CASH", payment_ref: str = "") -> int:
+def create_bill(customer_id: int, bill_date: str, items: List[Dict], paid_paise: int,
+                payment_mode: str = "CASH", payment_ref: str = "",
+                apply_gst: bool = True) -> int:
+    """
+    Creates a bill atomically inside a single transaction.
+    apply_gst=False means 0% GST — no CGST/SGST rows in ledger or database.
+    Returns bill_id on success, raises on any failure (caller must handle).
+    """
     conn = get_connection()
-    c = conn.cursor()
-    
-    subtotal_paise = sum(item["amount_paise"] for item in items)
-    cgst_paise = round(subtotal_paise * 0.015)
-    sgst_paise = round(subtotal_paise * 0.015)
-    grand_total_paise = subtotal_paise + cgst_paise + sgst_paise
-    balance_paise = max(0, grand_total_paise - paid_paise)
-    bill_no = get_next_bill_number()
+    try:
+        c = conn.cursor()
 
-    c.execute("""
-        INSERT INTO bills (
-            bill_no, bill_date, customer_id, subtotal_paise,
-            cgst_paise, sgst_paise, grand_total_paise, paid_paise,
-            balance_paise, payment_mode, payment_ref
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-    """, (bill_no, bill_date, customer_id, subtotal_paise, cgst_paise, sgst_paise, grand_total_paise, paid_paise, balance_paise, payment_mode, payment_ref.strip()))
-    
-    bill_id = c.lastrowid
+        subtotal_paise = sum(item["amount_paise"] for item in items)
+        if apply_gst:
+            cgst_paise = round(subtotal_paise * 0.015)
+            sgst_paise = round(subtotal_paise * 0.015)
+        else:
+            cgst_paise = 0
+            sgst_paise = 0
+        grand_total_paise = subtotal_paise + cgst_paise + sgst_paise
+        balance_paise = max(0, grand_total_paise - paid_paise)
+        bill_no = get_next_bill_number()
 
-    for item in items:
         c.execute("""
-            INSERT INTO bill_items (bill_id, description, hsn_code, weight_mg, rate_paise, making_paise, amount_paise)
-            VALUES (?, ?, ?, ?, ?, ?, ?);
-        """, (bill_id, item["description"], item.get("hsn_code", ""), item["weight_mg"], item["rate_paise"], item.get("making_paise", 0), item["amount_paise"]))
+            INSERT INTO bills (
+                bill_no, bill_date, customer_id, subtotal_paise,
+                cgst_paise, sgst_paise, grand_total_paise, paid_paise,
+                balance_paise, payment_mode, payment_ref
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """, (bill_no, bill_date, customer_id, subtotal_paise,
+              cgst_paise, sgst_paise, grand_total_paise, paid_paise,
+              balance_paise, payment_mode, payment_ref.strip()))
 
-    # 1. Full Grand Total goes to UDHAR (Debit - Customer bought goods)
-    c.execute("""
-        INSERT INTO ledger (customer_id, entry_date, entry_type, amount_paise, bill_id, payment_mode, remark)
-        VALUES (?, ?, 'UDHAR', ?, ?, 'BILL', ?);
-    """, (customer_id, bill_date, grand_total_paise, bill_id, f"બિલ નં. {bill_no} (કુલ ખરીદી / Total Bill)"))
+        bill_id = c.lastrowid
 
-    # 2. Payment made at billing goes to JAMA (Credit - Payment received)
-    if paid_paise > 0:
-        remark_txt = f"બિલ નં. {bill_no} પેમેન્ટ"
-        if payment_ref.strip():
-            remark_txt += f" ({payment_ref.strip()})"
+        for item in items:
+            c.execute("""
+                INSERT INTO bill_items (bill_id, description, hsn_code, weight_mg, rate_paise, making_paise, amount_paise)
+                VALUES (?, ?, ?, ?, ?, ?, ?);
+            """, (bill_id, item["description"], item.get("hsn_code", ""),
+                  item["weight_mg"], item["rate_paise"],
+                  item.get("making_paise", 0), item["amount_paise"]))
+
+        # 1. Full Grand Total → UDHAR (Customer owes this amount)
         c.execute("""
-            INSERT INTO ledger (customer_id, entry_date, entry_type, amount_paise, bill_id, payment_mode, remark, payment_ref)
-            VALUES (?, ?, 'JAMA', ?, ?, ?, ?, ?);
-        """, (customer_id, bill_date, paid_paise, bill_id, payment_mode, remark_txt, payment_ref.strip()))
+            INSERT INTO ledger (customer_id, entry_date, entry_type, amount_paise, bill_id, payment_mode, remark)
+            VALUES (?, ?, 'UDHAR', ?, ?, 'BILL', ?);
+        """, (customer_id, bill_date, grand_total_paise, bill_id,
+              f"બિલ નં. {bill_no} (કુલ ખરીદી / Total Bill)"))
 
-    conn.commit()
-    conn.close()
-    return bill_id
+        # 2. Down-payment made at billing → JAMA (Credit received)
+        if paid_paise > 0:
+            remark_txt = f"બિલ નં. {bill_no} પેમેન્ટ"
+            if payment_ref.strip():
+                remark_txt += f" ({payment_ref.strip()})"
+            c.execute("""
+                INSERT INTO ledger (customer_id, entry_date, entry_type, amount_paise, bill_id, payment_mode, remark, payment_ref)
+                VALUES (?, ?, 'JAMA', ?, ?, ?, ?, ?);
+            """, (customer_id, bill_date, paid_paise, bill_id,
+                  payment_mode, remark_txt, payment_ref.strip()))
+
+        conn.commit()
+        return bill_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 # ----------------- Dashboard Analytics -----------------
 
@@ -562,25 +585,78 @@ def get_purchases(keyword: str = "", purchase_type: str = None) -> List[Dict]:
     return rows
 
 def delete_purchase(purchase_id: int) -> bool:
+    """
+    Deletes a purchase record and its linked ledger entry if it's a URD voucher.
+    Uses exact voucher number match (not LIKE wildcard) to avoid deleting other entries.
+    """
     conn = get_connection()
-    c = conn.cursor()
-    # Check if URD with linked KHATA entry
-    c.execute("SELECT invoice_no, purchase_type FROM purchases WHERE id = ?;", (purchase_id,))
-    row = c.fetchone()
-    if row and row["purchase_type"] == "URD":
-        inv = row["invoice_no"]
-        c.execute("DELETE FROM ledger WHERE remark LIKE ?;", (f"%#{inv}%",))
-    c.execute("DELETE FROM purchases WHERE id = ?;", (purchase_id,))
-    conn.commit()
-    conn.close()
-    return True
+    try:
+        c = conn.cursor()
+        c.execute("SELECT invoice_no, purchase_type FROM purchases WHERE id = ?;", (purchase_id,))
+        row = c.fetchone()
+        if row and row["purchase_type"] == "URD":
+            inv = str(row["invoice_no"]).strip()
+            # Exact match: remark ends with the voucher token to avoid matching #1 in #10, #11 etc.
+            exact_token = f"#{inv}"
+            c.execute(
+                "DELETE FROM ledger WHERE remark LIKE ? AND remark LIKE ?;",
+                (f"%URD%", f"%{exact_token}")
+            )
+        c.execute("DELETE FROM purchases WHERE id = ?;", (purchase_id,))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 def backup_database(destination_folder: str) -> str:
+    """
+    Creates a safe, consistent backup using SQLite's built-in online backup API.
+    This is safe even while the database is open and being written to — unlike
+    shutil.copy2 which can produce a corrupt file if a write is in progress.
+    """
     os.makedirs(destination_folder, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     backup_file = os.path.join(destination_folder, f"jewelry_shop_backup_{timestamp}.db")
-    shutil.copy2(DB_PATH, backup_file)
+    src = sqlite3.connect(DB_PATH)
+    dst = sqlite3.connect(backup_file)
+    try:
+        src.backup(dst)
+    finally:
+        dst.close()
+        src.close()
     return backup_file
+
+def _run_one_time_ledger_migration():
+    """
+    Runs migrate_ledger_records() only once per database lifetime.
+    Tracks completion in a small meta table so manual ledger corrections
+    made after the first run are NEVER overwritten on subsequent startups.
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS app_meta (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
+    """)
+    c.execute("SELECT value FROM app_meta WHERE key = 'ledger_migrated_v1';")
+    row = c.fetchone()
+    conn.commit()
+    conn.close()
+    if row:
+        return  # Already done — never run again
+    migrate_ledger_records()
+    # Mark as done
+    conn2 = get_connection()
+    c2 = conn2.cursor()
+    c2.execute("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('ledger_migrated_v1', '1');")
+    conn2.commit()
+    conn2.close()
+
 
 def migrate_ledger_records():
     """
