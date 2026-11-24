@@ -135,9 +135,9 @@ class BillHistoryView(QWidget):
         self.date_from = QDateEdit()
         self.date_from.setCalendarPopup(True)
         self.date_from.setDisplayFormat("dd-MM-yyyy")
-        self.date_from.setMinimumWidth(125)
+        self.date_from.setMinimumWidth(135)
         self.date_from.setFixedHeight(32)
-        self.date_from.setStyleSheet("padding: 4px 8px; font-weight: bold; font-size: 13px; background: #FFFFFF; border: 1.5px solid #94A3B8; border-radius: 6px;")
+        self.date_from.setStyleSheet("padding: 4px 26px 4px 8px; font-weight: bold; font-size: 13px; background: #FFFFFF; border: 1.5px solid #94A3B8; border-radius: 6px;")
         self.date_from.setDate(QDate.currentDate().addDays(-30))
         filter_layout.addWidget(self.date_from)
 
@@ -148,9 +148,9 @@ class BillHistoryView(QWidget):
         self.date_to = QDateEdit()
         self.date_to.setCalendarPopup(True)
         self.date_to.setDisplayFormat("dd-MM-yyyy")
-        self.date_to.setMinimumWidth(125)
+        self.date_to.setMinimumWidth(135)
         self.date_to.setFixedHeight(32)
-        self.date_to.setStyleSheet("padding: 4px 8px; font-weight: bold; font-size: 13px; background: #FFFFFF; border: 1.5px solid #94A3B8; border-radius: 6px;")
+        self.date_to.setStyleSheet("padding: 4px 26px 4px 8px; font-weight: bold; font-size: 13px; background: #FFFFFF; border: 1.5px solid #94A3B8; border-radius: 6px;")
         self.date_to.setDate(QDate.currentDate())
         filter_layout.addWidget(self.date_to)
 

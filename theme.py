@@ -134,6 +134,11 @@ QLineEdit, QComboBox, QDateEdit {{
     color: #0F172A;
 }}
 
+QDateEdit {{
+    padding-right: 28px;
+    min-width: 135px;
+}}
+
 QLineEdit:focus, QComboBox:focus, QDateEdit:focus {{
     border: 2px solid {COLOR_GOLD};
     background-color: #FFFDF9;

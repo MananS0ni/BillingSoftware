@@ -134,6 +134,9 @@ class KachuKhatuView(QWidget):
 
         meta_grid = QGridLayout()
         meta_grid.setSpacing(6)
+        meta_grid.setColumnStretch(0, 3)
+        meta_grid.setColumnStretch(1, 2)
+        meta_grid.setColumnStretch(2, 4)
 
         # Date
         self.lbl_bill_date = QLabel(t("lbl_bill_date"))
@@ -143,12 +146,13 @@ class KachuKhatuView(QWidget):
         self.date_bill.setDisplayFormat("dd-MM-yyyy")
         self.date_bill.setDate(QDate.currentDate())
         self.date_bill.setFixedHeight(28)
+        self.date_bill.setMinimumWidth(135)
         self.date_bill.setStyleSheet("""
             QDateEdit {
                 background-color: #FFFDF9;
                 border: 1.5px solid #94A3B8;
                 border-radius: 6px;
-                padding: 4px 8px;
+                padding: 4px 26px 4px 8px;
                 font-weight: bold;
                 font-size: 13px;
                 color: #0F172A;
