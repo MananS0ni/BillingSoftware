@@ -8,7 +8,7 @@ Handles:
 """
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
+    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QLineEdit, 
     QPushButton, QTableWidget, QTableWidgetItem, QHeaderView,
     QDialog, QFormLayout, QMessageBox, QComboBox, QFrame, QDateEdit,
     QScrollArea
@@ -22,8 +22,8 @@ from database import (
     add_purchase, add_urd_purchase, get_purchases, delete_purchase,
     get_purchase_by_id, get_next_urd_voucher_number, get_all_customers
 )
-from format_utils import format_inr, format_date_dmy
-from print_manager import print_or_pdf_urd_voucher
+from format_utils import format_inr, format_date_dmy, num_to_words_title_case
+from print_manager import print_or_pdf_urd_voucher, print_or_pdf_dealer_purchase
 
 # ----------------- URD Customer Old Gold Purchase Dialog -----------------
 
@@ -659,6 +659,266 @@ class AddPurchaseDialog(QDialog):
 
         self.accept()
 
+# ----------------- Purchase Invoice & Voucher Full Details Dialog -----------------
+
+class PurchaseDetailsDialog(QDialog):
+    """
+    Detailed modal invoice viewer for Wholesale Dealer Invoices & URD Purchase Vouchers.
+    Displays all items, weights, purity touch %, GST breakdown, payment method & notes.
+    Provides 1-click Print / PDF voucher button.
+    """
+    def __init__(self, purchase_id: int, parent=None):
+        super().__init__(parent)
+        self.purchase_id = purchase_id
+        self.p_data = get_purchase_by_id(purchase_id)
+        ptype = self.p_data.get("purchase_type", "DEALER").upper() if self.p_data else "DEALER"
+        inv_no = self.p_data.get("invoice_no", "") if self.p_data else str(purchase_id)
+        title = t("dealer_invoice_details_title") if ptype == "DEALER" else t("urd_voucher_details_title")
+        self.setWindowTitle(f"{title} - #{inv_no}")
+        self.resize(680, 580)
+        self.setMinimumWidth(640)
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #F8F7F4;
+                font-family: 'Noto Sans Gujarati', 'Segoe UI', Arial, sans-serif;
+            }
+            QLabel {
+                background-color: transparent;
+                font-size: 13px;
+                color: #1A2521;
+            }
+            QFrame#CardFrame {
+                background-color: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-radius: 8px;
+            }
+        """)
+        self.init_ui()
+
+    def init_ui(self):
+        if not self.p_data:
+            l = QVBoxLayout(self)
+            l.addWidget(QLabel("Purchase entry not found in database."))
+            return
+
+        p = self.p_data
+        ptype = p.get("purchase_type", "DEALER").upper()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(22, 18, 22, 18)
+        layout.setSpacing(12)
+
+        # 1. Top Header with Badge & Date
+        top_box = QHBoxLayout()
+        title_text = t("dealer_invoice_details_title") if ptype == "DEALER" else t("urd_voucher_details_title")
+        lbl_title = QLabel(f"📜 {title_text}")
+        lbl_title.setStyleSheet("font-size: 18px; font-weight: bold; color: #0B1E19;")
+        top_box.addWidget(lbl_title)
+
+        top_box.addStretch()
+
+        badge_txt = t("badge_dealer") if ptype == "DEALER" else t("badge_urd_cust")
+        lbl_badge = QLabel(f" {badge_txt} ")
+        lbl_badge.setStyleSheet("""
+            background: #6B2433;
+            color: #FFFFFF;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 4px;
+        """)
+        top_box.addWidget(lbl_badge)
+
+        lbl_date = QLabel(f"📅 {format_date_dmy(p['purchase_date'])}")
+        lbl_date.setStyleSheet("font-size: 13px; font-weight: bold; color: #475569; margin-left: 8px;")
+        top_box.addWidget(lbl_date)
+        layout.addLayout(top_box)
+
+        # 2. Party Information Card
+        card_party = QFrame()
+        card_party.setObjectName("CardFrame")
+        cp_layout = QGridLayout(card_party)
+        cp_layout.setContentsMargins(14, 10, 14, 10)
+        cp_layout.setSpacing(8)
+
+        # Supplier / Seller Name
+        party_label = t("lbl_supplier_name_colon") if ptype == "DEALER" else t("lbl_cust_name_colon")
+        supplier_name = p.get("supplier_name", "-")
+        cp_layout.addWidget(QLabel(f"<b>{party_label}</b>"), 0, 0)
+        lbl_name_val = QLabel(supplier_name)
+        lbl_name_val.setStyleSheet("font-weight: bold; font-size: 13px; color: #0F172A;")
+        cp_layout.addWidget(lbl_name_val, 0, 1)
+
+        # Invoice / Voucher #
+        cp_layout.addWidget(QLabel(f"<b>{t('lbl_invoice_no_colon')}</b>"), 0, 2)
+        lbl_inv_val = QLabel(f"#{p.get('invoice_no', '-')}")
+        lbl_inv_val.setStyleSheet("font-weight: bold; font-size: 13px; color: #B45309;")
+        cp_layout.addWidget(lbl_inv_val, 0, 3)
+
+        # GSTIN or Aadhaar UID
+        if ptype == "DEALER":
+            cp_layout.addWidget(QLabel(f"<b>{t('lbl_supplier_gstin_colon')}</b>"), 1, 0)
+            gstin_val = p.get("supplier_gstin", "") or "—"
+            lbl_gstin = QLabel(gstin_val)
+            lbl_gstin.setStyleSheet("font-family: monospace; font-size: 12px; font-weight: bold;")
+            cp_layout.addWidget(lbl_gstin, 1, 1)
+        else:
+            cp_layout.addWidget(QLabel("<b>આધાર UID (Aadhaar):</b>"), 1, 0)
+            uid_val = p.get("supplier_uid", "") or "—"
+            lbl_uid = QLabel(uid_val)
+            lbl_uid.setStyleSheet("font-family: monospace; font-size: 12px; font-weight: bold;")
+            cp_layout.addWidget(lbl_uid, 1, 1)
+
+        # Payment Mode
+        cp_layout.addWidget(QLabel(f"<b>{t('lbl_pay_mode')}</b>"), 1, 2)
+        cp_layout.addWidget(QLabel(p.get("payment_mode", "CASH")), 1, 3)
+
+        # Payment Ref / Notes
+        cp_layout.addWidget(QLabel("<b>પેમેન્ટ વિગત / UTR:</b>"), 2, 0)
+        ref_text = p.get("payment_ref", "") or "—"
+        cp_layout.addWidget(QLabel(ref_text), 2, 1)
+
+        # Payment Status
+        cp_layout.addWidget(QLabel("<b>સ્ટેટસ (Status):</b>"), 2, 2)
+        lbl_status = QLabel(p.get("payment_status", "PAID"))
+        lbl_status.setStyleSheet("color: #16A34A; font-weight: bold;")
+        cp_layout.addWidget(lbl_status, 2, 3)
+
+        layout.addWidget(card_party)
+
+        # 3. Item & Jewelry Specifications Card
+        card_item = QFrame()
+        card_item.setObjectName("CardFrame")
+        ci_layout = QGridLayout(card_item)
+        ci_layout.setContentsMargins(14, 10, 14, 10)
+        ci_layout.setSpacing(8)
+
+        ci_layout.addWidget(QLabel("<b>દાગીનાની વિગત (Description):</b>"), 0, 0)
+        lbl_desc = QLabel(p.get("description", "-"))
+        lbl_desc.setStyleSheet("font-size: 14px; font-weight: bold; color: #0B1E19;")
+        ci_layout.addWidget(lbl_desc, 0, 1, 1, 3)
+
+        gross_g = (p.get("weight_mg", 0)) / 1000.0
+        touch = float(p.get("touch_purity", 100.0) or 100.0)
+        fine_g = (p.get("fine_weight_mg", 0)) / 1000.0
+        if fine_g <= 0 and gross_g > 0:
+            fine_g = round(gross_g * (touch / 100.0), 3)
+
+        ci_layout.addWidget(QLabel(f"<b>{t('lbl_gross_wt_colon')}</b>"), 1, 0)
+        ci_layout.addWidget(QLabel(f"{gross_g:.3f} g"), 1, 1)
+
+        ci_layout.addWidget(QLabel(f"<b>{t('lbl_purity_colon')}</b>"), 1, 2)
+        ci_layout.addWidget(QLabel(f"{touch:.1f}%"), 1, 3)
+
+        ci_layout.addWidget(QLabel(f"<b>{t('lbl_fine_wt_colon')}</b>"), 2, 0)
+        lbl_fine = QLabel(f"{fine_g:.3f} g")
+        lbl_fine.setStyleSheet("font-weight: bold; color: #B45309;")
+        ci_layout.addWidget(lbl_fine, 2, 1)
+
+        rate_rs = (p.get("rate_paise", 0)) / 100.0
+        ci_layout.addWidget(QLabel(f"<b>{t('lbl_buy_rate_lbl')}</b>"), 2, 2)
+        lbl_rate = QLabel(f"{format_inr(rate_rs)} / g")
+        lbl_rate.setStyleSheet("font-weight: bold;")
+        ci_layout.addWidget(lbl_rate, 2, 3)
+
+        layout.addWidget(card_item)
+
+        # 4. Financial & Tax Breakdown Card
+        card_calc = QFrame()
+        card_calc.setStyleSheet("""
+            QFrame {
+                background-color: #FEFCE8;
+                border: 1.5px solid #FDE047;
+                border-radius: 8px;
+            }
+        """)
+        cc_layout = QVBoxLayout(card_calc)
+        cc_layout.setContentsMargins(14, 10, 14, 10)
+        cc_layout.setSpacing(6)
+
+        subtotal_rs = (p.get("subtotal_paise", 0)) / 100.0
+        gst_rate = float(p.get("gst_rate_percent", 3.0 if ptype == "DEALER" else 5.0) or 0.0)
+        gst_rs = (p.get("gst_paise", 0)) / 100.0
+        total_rs = ((p.get("net_payout_paise", 0) or p.get("total_paise", 0))) / 100.0
+
+        r1 = QHBoxLayout()
+        r1.addWidget(QLabel(f"<b>{t('lbl_subtotal_colon')}</b>"))
+        r1.addStretch()
+        r1.addWidget(QLabel(f"{format_inr(subtotal_rs)}"))
+        cc_layout.addLayout(r1)
+
+        r2 = QHBoxLayout()
+        gst_label = f"<b>{t('lbl_gst_itc_colon')} ({gst_rate:.1f}%)</b>" if ptype == "DEALER" else f"<b>GST કપાત ({gst_rate:.1f}%):</b>"
+        r2.addWidget(QLabel(gst_label))
+        r2.addStretch()
+        lbl_gst_val = QLabel(f"+ {format_inr(gst_rs)}" if ptype == "DEALER" else f"- {format_inr(gst_rs)}")
+        lbl_gst_val.setStyleSheet("color: #16A34A; font-weight: bold;" if ptype == "DEALER" else "color: #DC2626; font-weight: bold;")
+        r2.addWidget(lbl_gst_val)
+        cc_layout.addLayout(r2)
+
+        # Divider line
+        div = QFrame()
+        div.setFrameShape(QFrame.HLine)
+        div.setStyleSheet("color: #E2E8F0;")
+        cc_layout.addWidget(div)
+
+        r3 = QHBoxLayout()
+        lbl_tot_title = QLabel(f"<b>{t('lbl_net_total_colon')}</b>")
+        lbl_tot_title.setStyleSheet("font-size: 15px; color: #0B1E19;")
+        r3.addWidget(lbl_tot_title)
+        r3.addStretch()
+        lbl_tot_val = QLabel(format_inr(total_rs))
+        lbl_tot_val.setStyleSheet("font-size: 20px; font-weight: bold; color: #0B1E19;")
+        r3.addWidget(lbl_tot_val)
+        cc_layout.addLayout(r3)
+
+        # Words
+        words = f"Rupees {num_to_words_title_case(round(total_rs))} Only"
+        lbl_words = QLabel(f"<b>{t('lbl_in_words_colon')}</b> {words}")
+        lbl_words.setStyleSheet("font-size: 11px; color: #4A121A; font-style: italic;")
+        cc_layout.addWidget(lbl_words)
+
+        layout.addWidget(card_calc)
+
+        # 5. Buttons Bar
+        btn_bar = QHBoxLayout()
+        btn_print = QPushButton("🖨️ " + t("btn_print_voucher"))
+        btn_print.setObjectName("GoldActionBtn")
+        btn_print.setCursor(Qt.PointingHandCursor)
+        btn_print.setFixedHeight(34)
+        btn_print.setStyleSheet("""
+            QPushButton {
+                background-color: #6B2433;
+                color: #FFFFFF;
+                font-size: 13px;
+                font-weight: bold;
+                padding: 6px 16px;
+                border-radius: 4px;
+            }
+            QPushButton:hover { background-color: #832C3E; }
+        """)
+        btn_print.clicked.connect(self.print_voucher)
+        btn_bar.addWidget(btn_print)
+
+        btn_bar.addStretch()
+
+        btn_close = QPushButton(t("btn_close"))
+        btn_close.setObjectName("SecondaryBtn")
+        btn_close.setCursor(Qt.PointingHandCursor)
+        btn_close.setFixedHeight(34)
+        btn_close.clicked.connect(self.accept)
+        btn_bar.addWidget(btn_close)
+
+        layout.addLayout(btn_bar)
+
+    def print_voucher(self):
+        if not self.p_data:
+            return
+        ptype = self.p_data.get("purchase_type", "DEALER").upper()
+        if ptype == "URD":
+            print_or_pdf_urd_voucher(self.p_data, self)
+        else:
+            print_or_pdf_dealer_purchase(self.p_data, self)
+
 # ----------------- Main Purchases View Screen -----------------
 
 class PurchasesView(QWidget):
@@ -787,6 +1047,7 @@ class PurchasesView(QWidget):
         h.setSectionResizeMode(10, QHeaderView.ResizeToContents)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.verticalHeader().setDefaultSectionSize(40)
+        self.table.cellDoubleClicked.connect(self.on_table_double_clicked)
         layout.addWidget(self.table)
 
     def set_filter_type(self, ptype):
@@ -813,10 +1074,10 @@ class PurchasesView(QWidget):
 
     def load_purchases(self):
         keyword = self.txt_search.text()
-        purchases = get_purchases(keyword, purchase_type=self.current_filter_type)
+        self.current_purchases = get_purchases(keyword, purchase_type=self.current_filter_type)
         self.table.setRowCount(0)
 
-        for row_idx, p in enumerate(purchases):
+        for row_idx, p in enumerate(self.current_purchases):
             self.table.insertRow(row_idx)
             self.table.setItem(row_idx, 0, QTableWidgetItem(format_date_dmy(p["purchase_date"])))
             self.table.setItem(row_idx, 1, QTableWidgetItem(f"#{p['invoice_no']}"))
@@ -881,29 +1142,88 @@ class PurchasesView(QWidget):
             act_layout.setContentsMargins(2, 2, 2, 2)
             act_layout.setSpacing(4)
 
-            # Print Voucher button (Available for URD purchases)
-            if ptype == "URD":
-                btn_print = QPushButton("🖨️")
-                btn_print.setToolTip(t("tip_print_urd"))
-                btn_print.setMaximumWidth(32)
-                btn_print.setCursor(Qt.PointingHandCursor)
-                btn_print.clicked.connect(lambda _, pid=p["id"]: self.print_urd_voucher(pid))
-                act_layout.addWidget(btn_print)
+            # 1. View Details Button (Eye icon - for ALL purchases)
+            btn_view = QPushButton("👁️")
+            btn_view.setToolTip(t("tip_view_purchase"))
+            btn_view.setMaximumWidth(32)
+            btn_view.setCursor(Qt.PointingHandCursor)
+            btn_view.setStyleSheet("""
+                QPushButton {
+                    background-color: #EFF6FF;
+                    color: #1D4ED8;
+                    border: 1px solid #BFDBFE;
+                    border-radius: 4px;
+                    font-size: 13px;
+                    padding: 3px 6px;
+                }
+                QPushButton:hover { background-color: #DBEAFE; }
+            """)
+            btn_view.clicked.connect(lambda _, pid=p["id"]: self.view_purchase_details(pid))
+            act_layout.addWidget(btn_view)
 
-            # Delete button
+            # 2. Print Voucher button (Available for ALL purchases: Dealer & URD)
+            btn_print = QPushButton("🖨️")
+            btn_print.setToolTip(t("tip_print_voucher"))
+            btn_print.setMaximumWidth(32)
+            btn_print.setCursor(Qt.PointingHandCursor)
+            btn_print.setStyleSheet("""
+                QPushButton {
+                    background-color: #F8FAFC;
+                    color: #0F172A;
+                    border: 1px solid #CBD5E1;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    padding: 3px 6px;
+                }
+                QPushButton:hover { background-color: #E2E8F0; }
+            """)
+            btn_print.clicked.connect(lambda _, pobj=p: self.print_purchase_voucher(pobj))
+            act_layout.addWidget(btn_print)
+
+            # 3. Delete button
             btn_del = QPushButton("❌")
             btn_del.setToolTip(t("tip_delete_entry"))
             btn_del.setMaximumWidth(32)
             btn_del.setCursor(Qt.PointingHandCursor)
+            btn_del.setStyleSheet("""
+                QPushButton {
+                    background-color: #FEE2E2;
+                    color: #DC2626;
+                    border: 1px solid #FCA5A5;
+                    border-radius: 4px;
+                    font-size: 11px;
+                    padding: 3px 6px;
+                }
+                QPushButton:hover { background-color: #FCA5A5; color: #991B1B; }
+            """)
             btn_del.clicked.connect(lambda _, pid=p["id"]: self.delete_entry(pid))
             act_layout.addWidget(btn_del)
 
             self.table.setCellWidget(row_idx, 10, act_widget)
 
+    def on_table_double_clicked(self, row, col):
+        if hasattr(self, 'current_purchases') and 0 <= row < len(self.current_purchases):
+            p = self.current_purchases[row]
+            self.view_purchase_details(p["id"])
+
+    def view_purchase_details(self, purchase_id: int):
+        PurchaseDetailsDialog(purchase_id, self).exec()
+
+    def print_purchase_voucher(self, p_or_id):
+        if isinstance(p_or_id, int):
+            p = get_purchase_by_id(p_or_id)
+        else:
+            p = p_or_id
+        if not p:
+            return
+        ptype = p.get("purchase_type", "DEALER").upper()
+        if ptype == "URD":
+            print_or_pdf_urd_voucher(p, self)
+        else:
+            print_or_pdf_dealer_purchase(p, self)
+
     def print_urd_voucher(self, purchase_id: int):
-        urd_dict = get_purchase_by_id(purchase_id)
-        if urd_dict:
-            print_or_pdf_urd_voucher(urd_dict, self)
+        self.print_purchase_voucher(purchase_id)
 
     def delete_entry(self, purchase_id: int):
         reply = QMessageBox.question(

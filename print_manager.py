@@ -813,3 +813,441 @@ def print_or_pdf_urd_voucher(urd_data: dict, parent_window=None, save_pdf_path: 
             pass
 
     return True
+
+# ----------------- Dealer Wholesale Purchase Voucher (Inward Register / GRN) -----------------
+
+def generate_dealer_purchase_html(p_data: dict, shop_settings: dict = None, page_size: str = "A5") -> str:
+    """
+    Generates an official, compact single-page Dealer Inward Purchase Voucher / Goods Received Note (GRN).
+    Matches the shop's burgundy theme (#6b2433), authentic fonts, and legal details.
+    """
+    if not shop_settings:
+        st = load_settings()
+        shop_settings = {
+            "header_left": st.get("header_left", "વાયુ આદિતી"),
+            "header_center": st.get("header_center", "॥ શ્રી હરિ ॥"),
+            "header_right": st.get("header_right", "બ્રિજેશભાઈ ૯૮૨૫૧ ૬૨૦૬૫"),
+            "shop_name_gu": st.get("shop_name_gu", "સોની નટવરલાલ હિંમતલાલ"),
+            "proprietor": st.get("proprietor", "સોની બ્રિજેશ નટવરલાલ"),
+            "tagline": st.get("tagline", "સોના-ચાંદીના દાગીના બનાવનાર તથા વેચનાર."),
+            "address": st.get("address", "જૈન દેરાસર પાસે, બાવળા-૩૮૨૨૨૦. જી. અમદાવાદ."),
+            "gstin": st.get("gstin", "24BPXPS8279A1Z7")
+        }
+
+    logo_b64 = get_nh_logo_base64()
+
+    inv_no = str(p_data.get("invoice_no") or p_data.get("id") or "1")
+    raw_date = str(p_data.get("purchase_date") or "")
+    try:
+        if "-" in raw_date:
+            dt = datetime.strptime(raw_date.split()[0], "%Y-%m-%d")
+            date_str = dt.strftime("%d/%m/%Y")
+        else:
+            date_str = raw_date
+    except Exception:
+        date_str = raw_date or datetime.now().strftime("%d/%m/%Y")
+
+    supplier_name = p_data.get("supplier_name") or "Wholesale Bullion Dealer"
+    supplier_gstin = p_data.get("supplier_gstin") or ""
+    desc = p_data.get("description", "સોનું / ચાંદી")
+    
+    gross_g = (p_data.get("weight_mg", 0)) / 1000.0
+    touch = float(p_data.get("touch_purity", 100.0) or 100.0)
+    fine_g = (p_data.get("fine_weight_mg", 0)) / 1000.0
+    if fine_g <= 0 and gross_g > 0:
+        fine_g = round(gross_g * (touch / 100.0), 3)
+
+    rate_rs = (p_data.get("rate_paise", 0)) / 100.0
+    subtotal_rs = (p_data.get("subtotal_paise", 0)) / 100.0
+    gst_rate = float(p_data.get("gst_rate_percent", 3.0) or 3.0)
+    gst_rs = (p_data.get("gst_paise", 0)) / 100.0
+    total_rs = (p_data.get("total_paise", 0)) / 100.0
+    mode = str(p_data.get("payment_mode", "BANK TRANSFER / RTGS")).upper()
+    ref = p_data.get("payment_ref", "")
+    status = str(p_data.get("payment_status", "PAID")).upper()
+
+    words_total = f"Rupees {num_to_words_title_case(round(total_rs))} Only"
+    pw, ph = ("148mm", "210mm") if page_size.upper() == "A5" else ("210mm", "297mm")
+
+    html = f"""<!DOCTYPE html>
+<html lang="gu">
+<head>
+<meta charset="utf-8">
+<title>Dealer Inward Purchase - #{inv_no}</title>
+<style>
+  @page {{
+    size: {pw} {ph};
+    margin: 5mm;
+  }}
+  * {{
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }}
+  body {{
+    margin: 0;
+    padding: 2mm 3mm;
+    font-family: 'Noto Sans Gujarati', 'Shruti', 'Segoe UI', Tahoma, sans-serif;
+    color: #1A1A1A;
+    font-size: 8.5pt;
+    line-height: 1.25;
+    background: #FFF;
+  }}
+  .hdr {{
+    border: 1.5px solid #6b2433;
+    padding: 2mm 3mm 1.5mm;
+    margin-bottom: 2mm;
+  }}
+  .top-line {{
+    display: flex;
+    justify-content: space-between;
+    font-size: 7.5pt;
+    font-weight: bold;
+    color: #4A121A;
+    border-bottom: 0.5px solid #D8C4C8;
+    padding-bottom: 1mm;
+    margin-bottom: 1.5mm;
+  }}
+  .name {{
+    display: flex;
+    align-items: center;
+    gap: 3mm;
+  }}
+  .logo {{
+    width: 14mm;
+    height: 14mm;
+    object-fit: contain;
+  }}
+  h1 {{
+    margin: 0;
+    font-size: 15pt;
+    color: #6b2433;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    line-height: 1.1;
+  }}
+  .sub {{
+    font-size: 7pt;
+    color: #333;
+    margin-top: 0.5mm;
+    line-height: 1.2;
+  }}
+  .badge {{
+    background: #6b2433;
+    color: #FFF;
+    text-align: center;
+    font-size: 8.5pt;
+    font-weight: bold;
+    padding: 1mm;
+    margin-top: 1.5mm;
+    letter-spacing: 0.5px;
+  }}
+  .meta {{
+    display: flex;
+    justify-content: space-between;
+    background: #F8F5F5;
+    border: 1px solid #D8C4C8;
+    padding: 1.5mm 3mm;
+    font-size: 8pt;
+    margin-bottom: 2mm;
+  }}
+  .box {{
+    border: 1px solid #D8C4C8;
+    padding: 2mm 3mm;
+    margin-bottom: 2mm;
+    font-size: 8pt;
+    background: #FAFAFA;
+  }}
+  table {{
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2mm;
+    font-size: 8pt;
+  }}
+  th, td {{
+    border: 0.8px solid #6b2433;
+    padding: 1.4mm 1.8mm;
+  }}
+  th {{
+    background: #6b2433;
+    color: #FFF;
+    font-weight: bold;
+    font-size: 7.5pt;
+    text-align: center;
+  }}
+  td.n {{
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }}
+  tr.tot td {{
+    font-weight: bold;
+    background: #F6E7DF;
+  }}
+  .tots {{
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2mm;
+    gap: 3mm;
+  }}
+  .wds {{
+    flex: 1;
+    border: 1px solid #D8C4C8;
+    padding: 2mm;
+    font-size: 7.5pt;
+    min-height: 16mm;
+    background: #FAFAFA;
+  }}
+  .calc {{
+    width: 60mm;
+    border-collapse: collapse;
+    font-size: 8pt;
+  }}
+  .calc td {{
+    border: 0.8px solid #D8C4C8;
+    padding: 1.2mm 2mm;
+  }}
+  .calc tr.grand td {{
+    background: #6b2433;
+    color: #FFF;
+    font-weight: bold;
+    font-size: 9pt;
+  }}
+  .sgn {{
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4mm;
+    font-size: 7.5pt;
+    padding: 0 4mm;
+  }}
+  .sgn-box {{
+    text-align: center;
+    width: 42mm;
+    border-top: 0.8px dashed #6b2433;
+    padding-top: 1mm;
+  }}
+</style>
+</head>
+<body>
+
+  <div class="hdr">
+    <div class="top-line">
+      <span>{shop_settings['header_left']}</span>
+      <span>{shop_settings['header_center']}</span>
+      <span>{shop_settings['header_right']}</span>
+    </div>
+    <div class="top-line" style="border-bottom:none; margin-bottom:1mm; padding-bottom:0;">
+      <span><b>GSTIN : {shop_settings['gstin']}</b></span>
+      <span></span>
+      <span>બાવળા (અમદાવાદ)</span>
+    </div>
+    <div class="name">
+      <img class="logo" alt="NH logo" src="data:image/png;base64,{logo_b64}">
+      <div style="flex:1">
+        <h1>{shop_settings['shop_name_gu']}</h1>
+        <div class="sub">
+          પ્રોપરાઈટર : {shop_settings['proprietor']}<br>
+          <b>{shop_settings['tagline']}</b><br>
+          {shop_settings['address']}
+        </div>
+      </div>
+    </div>
+    <div class="badge">
+      🏢 વેપારી માલ ખરીદી વાઉચર (DEALER INWARD PURCHASE VOUCHER / GRN)
+    </div>
+  </div>
+
+  <div class="meta">
+    <div><b>બિલ / વાઉચર નં. (Bill #):</b> #{inv_no}</div>
+    <div><b>તારીખ (Date):</b> {date_str}</div>
+  </div>
+
+  <div class="box">
+    <div style="display: flex; justify-content: space-between;">
+      <div><b>વેપારી / સપ્લાયર (Supplier):</b> <b>{supplier_name}</b></div>
+      <div><b>વેપારી GSTIN:</b> <span style="font-family: monospace; font-size: 8.5pt; font-weight: bold;">{supplier_gstin or '—'}</span></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 1.5mm;">
+      <div><b>ચુકવણી પદ્ધતિ (Mode):</b> {mode}</div>
+      <div><b>રેફરન્સ / UTR / રીમાર્ક:</b> {ref or '—'}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 6mm;">ક્રમ</th>
+        <th>વસ્તુની વિગત (Item Description)</th>
+        <th style="width: 17mm;">ગ્રોસ વજન<br><small>Gross g</small></th>
+        <th style="width: 15mm;">ટચ / પ્યોરિટી<br><small>Touch %</small></th>
+        <th style="width: 17mm;">ચોખ્ખું સોનું<br><small>Fine Wt. g</small></th>
+        <th style="width: 18mm;">ખરીદ ભાવ<br><small>Rate ₹/g</small></th>
+        <th style="width: 22mm;">રકમ<br><small>Gross ₹</small></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="text-align: center;">1</td>
+        <td style="font-weight: 600;">{desc}</td>
+        <td class="n">{gross_g:.3f}</td>
+        <td style="text-align: center;">{touch:.1f}%</td>
+        <td class="n">{fine_g:.3f}</td>
+        <td class="n">{rate_rs:,.0f}</td>
+        <td class="n" style="font-weight: 600;">{subtotal_rs:,.2f}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="tot">
+        <td colspan="2" style="text-align: right;">કુલ (Total)</td>
+        <td class="n">{gross_g:.3f} g</td>
+        <td></td>
+        <td class="n">{fine_g:.3f} g</td>
+        <td></td>
+        <td class="n">₹ {subtotal_rs:,.2f}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="tots">
+    <div class="wds">
+      <b>કુલ રકમ શબ્દોમાં (Amount in Words):</b><br>
+      <div style="margin-top: 1mm; font-weight: bold; color: #4A121A;">{words_total}</div>
+      <div style="margin-top: 2.5mm; font-size: 7pt; color: #555;">
+        • આ ખરીદી પર મળવાપાત્ર GST ઇનપુટ ટેક્સ ક્રેડિટ (ITC) નું વેરિફિકેશન થયેલ છે.<br>
+        • પેમેન્ટ સ્ટેટસ: <b>{status}</b>
+      </div>
+    </div>
+    <table class="calc">
+      <tr>
+        <td>કરપાત્ર રકમ (Taxable)</td>
+        <td class="n" style="font-weight: 600;">₹ {subtotal_rs:,.2f}</td>
+      </tr>
+      <tr>
+        <td>GST (ITC {gst_rate:.1f}%)</td>
+        <td class="n" style="color: #16A34A; font-weight: bold;">+ ₹ {gst_rs:,.2f}</td>
+      </tr>
+      <tr class="grand">
+        <td>કુલ બિલ રકમ (Net Bill)</td>
+        <td class="n">₹ {total_rs:,.2f}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="sgn">
+    <div class="sgn-box">
+      માલ આપનાર વેપારીની સહી<br>
+      <b>(Supplier's Signature)</b>
+    </div>
+    <div class="sgn-box">
+      સોની નટવરલાલ હિંમતલાલ<br>
+      <b>(Authorized Signatory)</b>
+    </div>
+  </div>
+
+</body>
+</html>
+"""
+    return html
+
+def export_dealer_purchase_to_pdf(p_data: dict, output_path: str, page_size: str = "A5") -> bool:
+    """Exports Dealer Purchase Voucher directly to single-page PDF with pixel-perfect accuracy."""
+    try:
+        dirname = os.path.dirname(output_path)
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
+
+        html_content = generate_dealer_purchase_html(p_data, page_size=page_size)
+        browser = find_headless_browser()
+
+        if browser:
+            with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8") as tf:
+                tf.write(html_content)
+                temp_html = tf.name
+
+            try:
+                cmd = [
+                    browser,
+                    "--headless=new",
+                    "--disable-gpu",
+                    "--no-pdf-header-footer",
+                    f"--print-to-pdf={os.path.abspath(output_path)}",
+                    f"file:///{os.path.abspath(temp_html).replace(os.sep, '/')}"
+                ]
+                res = subprocess.run(cmd, capture_output=True, timeout=20)
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    return True
+                else:
+                    print(f"[Dealer PDF Export Error] Browser returned: {res.stderr.decode('utf-8', errors='ignore')}")
+            finally:
+                if os.path.exists(temp_html):
+                    try:
+                        os.remove(temp_html)
+                    except Exception:
+                        pass
+
+        # Fallback to Qt QPrinter
+        printer = QPrinter(QPrinter.PrinterResolution)
+        printer.setOutputFormat(QPrinter.PdfFormat)
+        printer.setPageSize(QPageSize(QPageSize.A5))
+        printer.setPageMargins(QMarginsF(3, 3, 3, 3), QPageLayout.Millimeter)
+        printer.setOutputFileName(output_path)
+
+        paint_rect = printer.pageLayout().paintRectPixels(printer.resolution())
+        doc = QTextDocument()
+        doc.setDocumentMargin(0)
+        doc.setPageSize(QSizeF(paint_rect.width(), paint_rect.height()))
+        doc.setHtml(html_content)
+        doc.print_(printer)
+        return True
+
+    except Exception as e:
+        print(f"[Print Manager] Dealer purchase PDF export failed: {e}")
+        return False
+
+def print_or_pdf_dealer_purchase(p_data: dict, parent_window=None, save_pdf_path: str = None, page_size: str = "A5") -> bool:
+    """Renders Dealer purchase voucher and opens print dialog or exports to PDF."""
+    if save_pdf_path:
+        return export_dealer_purchase_to_pdf(p_data, save_pdf_path, page_size=page_size)
+
+    invoices_dir = INVOICES_DIR
+    os.makedirs(invoices_dir, exist_ok=True)
+    supplier_name = p_data.get("supplier_name") or "Wholesale_Dealer"
+    safe_name = re.sub(r'[^a-zA-Z0-9_\u0A80-\u0AFF]', '_', str(supplier_name))
+    inv_no = str(p_data.get("invoice_no") or p_data.get("id") or "1")
+    safe_inv = re.sub(r'[^a-zA-Z0-9_\-]', '_', inv_no)
+    pdf_path = os.path.join(invoices_dir, f"Dealer_Invoice_{safe_inv}_{safe_name}.pdf")
+
+    success = export_dealer_purchase_to_pdf(p_data, pdf_path, page_size=page_size)
+    if not success:
+        return False
+
+    printer = QPrinter(QPrinter.HighResolution)
+    printer.setPageSize(QPageSize(QPageSize.A5))
+    printer.setPageMargins(QMarginsF(3, 3, 3, 3), QPageLayout.Millimeter)
+
+    dialog = QPrintDialog(printer, parent_window)
+    if dialog.exec():
+        try:
+            pdf_doc = QPdfDocument()
+            pdf_doc.load(pdf_path)
+            if pdf_doc.pageCount() > 0:
+                painter = QPainter(printer)
+                paint_rect = printer.pageLayout().paintRectPixels(printer.resolution())
+                page_img = pdf_doc.render(0, paint_rect.size())
+                painter.drawImage(0, 0, page_img)
+                painter.end()
+                return True
+        except Exception as e:
+            print(f"[Print Manager] Physical print error: {e}")
+            try:
+                os.startfile(pdf_path, "print")
+                return True
+            except Exception:
+                pass
+    else:
+        try:
+            os.startfile(pdf_path)
+        except Exception:
+            pass
+
+    return True
