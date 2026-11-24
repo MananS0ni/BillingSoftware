@@ -23,7 +23,7 @@ from PySide6.QtCore import Qt, QDate
 
 from translations import t
 from database import get_all_bills_history, get_bill_full_details
-from format_utils import format_inr
+from format_utils import format_inr, get_caption
 from bill_details_dialog import BillDetailsDialog
 from print_manager import print_or_pdf_bill, export_bill_to_pdf
 from whatsapp_manager import send_bill_async, get_whatsapp_status
@@ -438,16 +438,13 @@ class BillHistoryView(QWidget):
         paid_fmt = format_inr(paid, is_paise=True)
         due_fmt = format_inr(due, is_paise=True)
 
-        msg_body = (
-            f"નમસ્તે {cust_name} શેઠ,\n\n"
-            f"આપનું સોની નટવરલાલ હિંમતલાલ (Soni Natvarlal Himmatlal) નું ટેક્સ ઇન્વોઇસ નં. #{bill_data['bill_no']} સામેલ છે.\n"
-            f"• તારીખ: {bill_data['bill_date']}\n"
-            f"• કુલ રકમ: {grand_fmt}\n"
-            f"• ચૂકવેલ રકમ: {paid_fmt}\n"
-            f"• બાકી ઉધાર રકમ: {due_fmt}\n\n"
-            f"આપની મુલાકાત બદલ ખૂબ ખૂબ આભાર! 🪙\n\n"
-            f"સોની નટવરલાલ હિંમતલાલ\n"
-            f"Soni Natvarlal Himmatlal"
+        msg_body = get_caption(
+            customer_name=cust_name,
+            bill_no=bill_data['bill_no'],
+            bill_date=bill_data['bill_date'],
+            total=grand,
+            paid=paid,
+            is_paise=True
         )
 
         send_bill_async(cust_mobile, msg_body, pdf_path)

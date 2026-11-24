@@ -12,6 +12,7 @@ from translations import t
 from database import get_bill_full_details, get_customer_balance
 from print_manager import print_or_pdf_bill, export_bill_to_pdf
 from whatsapp_manager import get_whatsapp_status, send_bill_async, ensure_bridge_running
+from format_utils import get_caption
 from app_paths import INVOICES_DIR
 
 class BillDetailsDialog(QDialog):
@@ -250,28 +251,14 @@ class BillDetailsDialog(QDialog):
             self.btn_wa.setText(t("btn_send_wa_bill"))
             return
 
-        # 6. Build WhatsApp message
-        date_str = self.bill_data["bill_date"]
-        paid = self.bill_data["paid_paise"] / 100.0
-        due = self.bill_data["balance_paise"] / 100.0
-        cust_name = self.bill_data["name_gu"]
-
-        message = (
-            f"🏅 *સોની નટવરલાલ હિંમતલાલ*\n"
-            f"━━━━━━━━━━━━━━━━━━\n"
-            f"📄 બિલ નં: *#{bill_no}*\n"
-            f"📅 તારીખ: {date_str}\n"
-            f"👤 ગ્રાહક: {cust_name}\n"
-            f"━━━━━━━━━━━━━━━━━━\n"
-            f"💰 કુલ રકમ: *₹{grand:,.2f}*\n"
-            f"✅ ચૂકવેલ: ₹{paid:,.2f}\n"
-        )
-        if due > 0:
-            message += f"⏳ બાકી: *₹{due:,.2f}*\n"
-        message += (
-            f"━━━━━━━━━━━━━━━━━━\n"
-            f"📎 PDF બિલ સાથે જોડાયેલ છે.\n"
-            f"🙏 ધન્યવાद!"
+        # 6. Build WhatsApp message (Standard Gujarati Template A or B)
+        message = get_caption(
+            customer_name=self.bill_data.get("name_gu", ""),
+            bill_no=bill_no,
+            bill_date=self.bill_data["bill_date"],
+            total=self.bill_data["grand_total_paise"],
+            paid=self.bill_data["paid_paise"],
+            is_paise=True
         )
 
         # 7. Send async (non-blocking) with callback

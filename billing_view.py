@@ -20,7 +20,7 @@ from database import (
     get_next_bill_number, get_customer_by_mobile, get_customer_balance
 )
 from print_manager import print_or_pdf_bill, export_bill_to_pdf
-from format_utils import format_inr
+from format_utils import format_inr, get_caption
 from whatsapp_manager import send_bill_async, get_whatsapp_status
 from settings_manager import get_owner_phone, is_owner_copy_enabled
 from app_paths import INVOICES_DIR
@@ -858,17 +858,13 @@ class BillingView(QWidget):
                 QMessageBox.Yes
             )
             if reply == QMessageBox.Yes:
-                wa_msg = (
-                    f"નમસ્તે {cust_name} શેઠ,\n\n"
-                    f"આપનું સોની નટવરલાલ હિંમતલાલ (Soni Natvarlal Himmatlal) નું ટેક્સ ઇન્વોઇસ નં. #{actual_bill_no} સામેલ છે.\n\n"
-                    f"🧾 બિલ નં.: #{actual_bill_no}\n"
-                    f"📅 તારીખ: {today}\n"
-                    f"💎 કુલ રકમ: {grand_fmt}\n"
-                    f"💵 જમા આપ્યા: {paid_fmt}\n"
-                    f"⚖️ બાકી ઉધાર: {due_fmt}\n\n"
-                    f"આપનું ડિજિટલ ઇનવોઇસ PDF આ સાથે સામેલ છે.\n"
-                    f"આપની મુલાકાત બદલ ખૂબ ખૂબ આભાર! 🙏\n\n"
-                    f"સોની નટવરલાલ હિંમતલાલ\nSoni Natvarlal Himmatlal"
+                wa_msg = get_caption(
+                    customer_name=cust_name,
+                    bill_no=actual_bill_no,
+                    bill_date=today,
+                    total=grand_total_paise,
+                    paid=paid_paise,
+                    is_paise=True
                 )
                 if pdf_path:
                     send_bill_async(cust_phone, message=wa_msg, pdf_path=pdf_path)
