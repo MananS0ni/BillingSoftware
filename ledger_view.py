@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from translations import t
-from database import search_customers, get_customer_ledger, get_customer_balance, add_payment
+from database import search_customers, get_customer_ledger, get_customer_balance, add_payment, delete_customer, get_customer_stats
 from bill_details_dialog import BillDetailsDialog
 from format_utils import format_inr, format_date_dmy
 
@@ -177,7 +177,30 @@ class LedgerView(QWidget):
         
         self.lbl_cust_info = QLabel(t("lbl_select_cust_prompt"))
         self.lbl_cust_info.setStyleSheet("font-size: 16px; font-weight: bold;")
-        c_layout.addWidget(self.lbl_cust_info)
+        c_layout.addWidget(self.lbl_cust_info, stretch=1)
+
+        self.btn_del_cust = QPushButton("🗑️ " + t("btn_delete_customer"))
+        self.btn_del_cust.setToolTip(t("tip_delete_customer"))
+        self.btn_del_cust.setStyleSheet("""
+            QPushButton {
+                background-color: #FEE2E2;
+                color: #DC2626;
+                border: 1px solid #FCA5A5;
+                border-radius: 4px;
+                padding: 4px 10px;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #FCA5A5;
+                color: #991B1B;
+            }
+        """)
+        self.btn_del_cust.setCursor(Qt.PointingHandCursor)
+        self.btn_del_cust.clicked.connect(self.delete_current_customer_prompt)
+        self.btn_del_cust.setVisible(False)
+        c_layout.addWidget(self.btn_del_cust)
+
         layout.addWidget(self.card_info)
 
         # Ledger History Table
@@ -246,6 +269,7 @@ class LedgerView(QWidget):
             f"👤 {customer['name_gu']} ({customer['mobile']})   |   "
             f"<span style='color:{color}; font-size:18px; font-weight:bold;'>{t('lbl_balance_due')} {status}</span>"
         )
+        self.btn_del_cust.setVisible(True)
 
         entries = get_customer_ledger(customer["id"])
         self.table.setRowCount(0)
@@ -292,11 +316,78 @@ class LedgerView(QWidget):
                 self.load_customer_ledger(self.current_customer)
             self.refresh_customer_dropdown()
 
+    def delete_current_customer_prompt(self):
+        if not self.current_customer:
+            return
+        cust = self.current_customer
+        cust_id = cust["id"]
+        name = cust["name_gu"]
+        if cust.get("name_en"):
+            name += f" ({cust['name_en']})"
+        mobile = cust.get("mobile", "")
+
+        stats = get_customer_stats(cust_id)
+        bill_count = stats.get("bill_count", 0)
+        ledger_count = stats.get("ledger_count", 0)
+        bal_paise = stats.get("balance_paise", 0)
+        bal_rs = bal_paise / 100.0
+
+        if bal_paise > 0:
+            bal_str = f"₹ {format_inr(bal_rs)} બાકી ઉધાર (Udhar Due)"
+        elif bal_paise < 0:
+            bal_str = f"₹ {format_inr(abs(bal_rs))} જમા (Advance / Jama)"
+        else:
+            bal_str = "₹ 0.00 (હિસાબ પૂર્ણ / Settled)"
+
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle("🗑️ ગ્રાહક કાઢી નાખો (Delete Customer)")
+        box.setText(
+            f"શું તમે ખરેખર ગ્રાહક <b>{name}</b> (મો. {mobile}) નો સમગ્ર ડેટા કાઢી નાખવા માંગો છો?<br>"
+            f"<i>(Are you sure you want to delete customer '{name}'?)</i>"
+        )
+        box.setInformativeText(
+            f"<b>📊 ગ્રાહકના રેકોર્ડ્સ (Customer Records):</b><br>"
+            f" • કુલ બિલ / વાઉચર: <b>{bill_count}</b><br>"
+            f" • ખાતાવહી એન્ટ્રીઓ: <b>{ledger_count}</b><br>"
+            f" • વર્તમાન હિસાબ: <b>{bal_str}</b><br><br>"
+            f"<span style='color: #DC2626; font-weight: bold;'>⚠️ ચેતવણી: આ ગ્રાહક અને તેમના તમામ બિલ તથા ખાતાવહી ડેટાબેઝમાંથી કાયમ માટે ડિલીટ થઈ જશે. આ ક્રિયા પાછી ખેંચી શકાશે નહીં!</span><br>"
+            f"<i>(Warning: All bills and ledger records for this customer will be permanently removed. This cannot be undone!)</i>"
+        )
+        btn_del = box.addButton("હા, કાયમ માટે કાઢી નાખો (Delete)", QMessageBox.DestructiveRole)
+        btn_del.setStyleSheet("background-color: #DC2626; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;")
+        btn_cancel = box.addButton("ના, રદ કરો (Cancel)", QMessageBox.RejectRole)
+        box.setDefaultButton(btn_cancel)
+
+        box.exec()
+
+        if box.clickedButton() == btn_del:
+            success = delete_customer(cust_id)
+            if success:
+                QMessageBox.information(
+                    self,
+                    "સફળ (Deleted)",
+                    f"ગ્રાહક '{name}' નો સમગ્ર ડેટા સફળતાપૂર્વક કાઢી નાખવામાં આવ્યો છે.\n(Customer '{name}' data deleted successfully.)"
+                )
+                self.current_customer = None
+                self.lbl_cust_info.setText(t("lbl_select_cust_prompt"))
+                self.btn_del_cust.setVisible(False)
+                self.table.setRowCount(0)
+                self.refresh_customer_dropdown()
+            else:
+                QMessageBox.critical(
+                    self,
+                    "ભૂલ (Error)",
+                    "ગ્રાહક કાઢી નાખતી વખતે ડેટાબેઝમાં ભૂલ આવી છે.\n(Failed to delete customer data.)"
+                )
+
     def retranslate_ui(self):
         self.btn_back.setText(t("btn_back"))
         self.lbl_page_title.setText(t("ledger_title"))
         self.txt_search.setPlaceholderText("🔍 " + t("lbl_search_cust"))
         self.btn_pay.setText(t("btn_record_payment"))
+        self.btn_del_cust.setText("🗑️ " + t("btn_delete_customer"))
+        self.btn_del_cust.setToolTip(t("tip_delete_customer"))
         self.setup_table_headers()
         self.refresh_customer_dropdown()
         if self.current_customer:

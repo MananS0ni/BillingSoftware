@@ -242,6 +242,71 @@ def get_customer_by_mobile(mobile: str) -> Optional[Dict]:
     conn.close()
     return dict(row) if row else None
 
+def delete_customer(customer_id: int) -> bool:
+    """Permanently deletes a customer and cascades all associated bills, bill items, and ledger entries."""
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        # 1. Find all bills belonging to this customer
+        c.execute("SELECT id FROM bills WHERE customer_id = ?;", (customer_id,))
+        bill_ids = [row[0] for row in c.fetchall()]
+
+        # 2. Delete bill items for these bills
+        if bill_ids:
+            placeholders = ",".join("?" * len(bill_ids))
+            c.execute(f"DELETE FROM bill_items WHERE bill_id IN ({placeholders});", bill_ids)
+
+        # 3. Delete ledger entries for this customer
+        c.execute("DELETE FROM ledger WHERE customer_id = ?;", (customer_id,))
+
+        # 4. Delete bills for this customer
+        c.execute("DELETE FROM bills WHERE customer_id = ?;", (customer_id,))
+
+        # 5. Unlink customer from purchases if referenced
+        try:
+            c.execute("UPDATE purchases SET customer_id = NULL WHERE customer_id = ?;", (customer_id,))
+        except Exception:
+            pass
+
+        # 6. Delete customer record
+        c.execute("DELETE FROM customers WHERE id = ?;", (customer_id,))
+
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Error deleting customer {customer_id}: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_customer_stats(customer_id: int) -> dict:
+    """Returns counts of bills, ledger entries, and balance for customer deletion prompt."""
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        c.execute("SELECT COUNT(*) FROM bills WHERE customer_id = ?;", (customer_id,))
+        bill_count = c.fetchone()[0]
+
+        c.execute("SELECT COUNT(*) FROM ledger WHERE customer_id = ?;", (customer_id,))
+        ledger_count = c.fetchone()[0]
+
+        # Udhar
+        c.execute("SELECT COALESCE(SUM(amount_paise), 0) FROM ledger WHERE customer_id = ? AND entry_type = 'UDHAR';", (customer_id,))
+        udhar = c.fetchone()[0]
+
+        # Jama
+        c.execute("SELECT COALESCE(SUM(amount_paise), 0) FROM ledger WHERE customer_id = ? AND entry_type = 'JAMA';", (customer_id,))
+        jama = c.fetchone()[0]
+
+        return {
+            "bill_count": bill_count,
+            "ledger_count": ledger_count,
+            "balance_paise": udhar - jama
+        }
+    finally:
+        conn.close()
+
 # ----------------- Balance Calculation -----------------
 
 def get_customer_balance(customer_id: int) -> int:
