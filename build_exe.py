@@ -108,6 +108,12 @@ def copy_runtime_assets():
     os.makedirs(invoices_dst, exist_ok=True)
     print("   Created: invoices/ folder")
 
+    # 6. Database Reset Helper Script
+    reset_src = os.path.join(BASE_DIR, "Reset_Database.bat")
+    if os.path.exists(reset_src):
+        shutil.copy2(reset_src, OUTPUT_DIR)
+        print("   Copied: Reset_Database.bat")
+
 def main():
     print("=" * 60)
     print(f"   Building {APP_NAME} Standalone Desktop Package")
