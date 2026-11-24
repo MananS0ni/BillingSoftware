@@ -21,6 +21,7 @@ from dashboard_view import DashboardView
 from customers_view import CustomersView
 from ledger_view import LedgerView
 from billing_view import BillingView
+from kachu_khatu_view import KachuKhatuView
 from khatabook_view import KhatabookView
 from purchases_view import PurchasesView
 from bill_history_view import BillHistoryView
@@ -166,30 +167,35 @@ class MainWindow(QMainWindow):
         self.btn_nav_billing.setCursor(Qt.PointingHandCursor)
         self.btn_nav_billing.clicked.connect(lambda: self.switch_screen(1))
 
+        self.btn_nav_kachu_khatu = QPushButton(f"  📒  {t('nav_kachu_khatu')}")
+        self.btn_nav_kachu_khatu.setProperty("class", "NavButton")
+        self.btn_nav_kachu_khatu.setCursor(Qt.PointingHandCursor)
+        self.btn_nav_kachu_khatu.clicked.connect(lambda: self.switch_screen(2))
+
         self.btn_nav_khatabook = QPushButton(f"  📖  {t('nav_khatabook')}")
         self.btn_nav_khatabook.setProperty("class", "NavButton")
         self.btn_nav_khatabook.setCursor(Qt.PointingHandCursor)
-        self.btn_nav_khatabook.clicked.connect(lambda: self.switch_screen(2))
+        self.btn_nav_khatabook.clicked.connect(lambda: self.switch_screen(3))
 
         self.btn_nav_purchases = QPushButton(f"  📦  {t('nav_purchases')}")
         self.btn_nav_purchases.setProperty("class", "NavButton")
         self.btn_nav_purchases.setCursor(Qt.PointingHandCursor)
-        self.btn_nav_purchases.clicked.connect(lambda: self.switch_screen(3))
+        self.btn_nav_purchases.clicked.connect(lambda: self.switch_screen(4))
 
         self.btn_nav_customers = QPushButton(f"  👥  {t('nav_customers')}")
         self.btn_nav_customers.setProperty("class", "NavButton")
         self.btn_nav_customers.setCursor(Qt.PointingHandCursor)
-        self.btn_nav_customers.clicked.connect(lambda: self.switch_screen(4))
+        self.btn_nav_customers.clicked.connect(lambda: self.switch_screen(5))
 
         self.btn_nav_ledger = QPushButton(f"  ⚖️  {t('nav_ledger')}")
         self.btn_nav_ledger.setProperty("class", "NavButton")
         self.btn_nav_ledger.setCursor(Qt.PointingHandCursor)
-        self.btn_nav_ledger.clicked.connect(lambda: self.switch_screen(5))
+        self.btn_nav_ledger.clicked.connect(lambda: self.switch_screen(6))
 
         self.btn_nav_bill_history = QPushButton(f"  📜  {t('nav_bill_history')}")
         self.btn_nav_bill_history.setProperty("class", "NavButton")
         self.btn_nav_bill_history.setCursor(Qt.PointingHandCursor)
-        self.btn_nav_bill_history.clicked.connect(lambda: self.switch_screen(6))
+        self.btn_nav_bill_history.clicked.connect(lambda: self.switch_screen(7))
 
         self.btn_nav_backup = QPushButton(f"  💾  {t('nav_backup')}")
         self.btn_nav_backup.setProperty("class", "NavButton")
@@ -198,6 +204,7 @@ class MainWindow(QMainWindow):
 
         side_layout.addWidget(self.btn_nav_dashboard)
         side_layout.addWidget(self.btn_nav_billing)
+        side_layout.addWidget(self.btn_nav_kachu_khatu)
         side_layout.addWidget(self.btn_nav_khatabook)
         side_layout.addWidget(self.btn_nav_purchases)
         side_layout.addWidget(self.btn_nav_customers)
@@ -215,34 +222,38 @@ class MainWindow(QMainWindow):
         # Screen 0: Executive Dashboard
         self.dashboard_view = DashboardView(
             on_new_bill_callback=lambda: self.switch_screen(1),
-            on_customers_callback=lambda: self.switch_screen(4)
+            on_customers_callback=lambda: self.switch_screen(5)
         )
         self.stack.addWidget(self.dashboard_view)
 
-        # Screen 1: Modern Billing
+        # Screen 1: Modern Billing (GST Tax Invoice)
         self.billing_view = BillingView(on_back_callback=lambda: self.switch_screen(0))
         self.stack.addWidget(self.billing_view)
 
-        # Screen 2: Khatabook (Backdated Billing & Khata Entry)
+        # Screen 2: Kachu Khatu (Traditional Counter Ledger)
+        self.kachu_khatu_view = KachuKhatuView(on_back_callback=lambda: self.switch_screen(0))
+        self.stack.addWidget(self.kachu_khatu_view)
+
+        # Screen 3: Khatabook (Backdated Billing & Khata Entry)
         self.khatabook_view = KhatabookView(on_back_callback=lambda: self.switch_screen(0))
         self.stack.addWidget(self.khatabook_view)
 
-        # Screen 3: Wholesale Purchases View
+        # Screen 4: Wholesale Purchases View
         self.purchases_view = PurchasesView(on_back_callback=lambda: self.switch_screen(0))
         self.stack.addWidget(self.purchases_view)
 
-        # Screen 4: Customers Directory (with 1-click shortcut to Ledger)
+        # Screen 5: Customers Directory (with 1-click shortcut to Ledger)
         self.customers_view = CustomersView(
             on_back_callback=lambda: self.switch_screen(0),
             on_open_ledger_callback=self.open_customer_ledger
         )
         self.stack.addWidget(self.customers_view)
 
-        # Screen 5: Ledger View
+        # Screen 6: Ledger View
         self.ledger_view = LedgerView(on_back_callback=lambda: self.switch_screen(0))
         self.stack.addWidget(self.ledger_view)
 
-        # Screen 6: Billing History View (All Past Records)
+        # Screen 7: Billing History View (All Past Records)
         self.bill_history_view = BillHistoryView(on_back_callback=lambda: self.switch_screen(0))
         self.stack.addWidget(self.bill_history_view)
 
@@ -258,6 +269,7 @@ class MainWindow(QMainWindow):
         nav_buttons = [
             self.btn_nav_dashboard,
             self.btn_nav_billing,
+            self.btn_nav_kachu_khatu,
             self.btn_nav_khatabook,
             self.btn_nav_purchases,
             self.btn_nav_customers,
@@ -278,18 +290,20 @@ class MainWindow(QMainWindow):
         elif index == 1:
             self.billing_view.reset_form()
         elif index == 2:
-            self.khatabook_view.reset_form()
+            self.kachu_khatu_view.reset_form()
         elif index == 3:
-            self.purchases_view.load_purchases()
+            self.khatabook_view.reset_form()
         elif index == 4:
-            self.customers_view.load_customers()
+            self.purchases_view.load_purchases()
         elif index == 5:
-            self.ledger_view.refresh_customer_dropdown()
+            self.customers_view.load_customers()
         elif index == 6:
+            self.ledger_view.refresh_customer_dropdown()
+        elif index == 7:
             self.bill_history_view.load_history()
 
     def open_customer_ledger(self, customer):
-        self.switch_screen(5)
+        self.switch_screen(6)
         self.ledger_view.load_customer_ledger(customer)
 
     def on_switch_language(self):
@@ -309,6 +323,7 @@ class MainWindow(QMainWindow):
         # 2. Update Sidebar
         self.btn_nav_dashboard.setText(f"  📊  {t('nav_dashboard')}")
         self.btn_nav_billing.setText(f"  🧾  {t('nav_new_bill')}")
+        self.btn_nav_kachu_khatu.setText(f"  📒  {t('nav_kachu_khatu')}")
         self.btn_nav_khatabook.setText(f"  📖  {t('nav_khatabook')}")
         self.btn_nav_purchases.setText(f"  📦  {t('nav_purchases')}")
         self.btn_nav_customers.setText(f"  👥  {t('nav_customers')}")
@@ -319,6 +334,7 @@ class MainWindow(QMainWindow):
         # 3. Retranslate All Views
         self.dashboard_view.retranslate_ui()
         self.billing_view.retranslate_ui()
+        self.kachu_khatu_view.retranslate_ui()
         self.khatabook_view.retranslate_ui()
         self.purchases_view.retranslate_ui()
         self.customers_view.retranslate_ui()

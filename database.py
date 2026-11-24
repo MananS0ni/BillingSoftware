@@ -405,6 +405,148 @@ def create_bill(customer_id: int, bill_date: str, items: List[Dict], paid_paise:
     finally:
         conn.close()
 
+
+def create_kachu_bill(customer_id: int, bill_date: str, items: List[Dict],
+                      round_off_paise: int = 0,
+                      cash_paise: int = 0, gold_paise: int = 0, silver_paise: int = 0,
+                      upi_paise: int = 0, cheque_paise: int = 0,
+                      upi_ref: str = "", cheque_ref: str = "",
+                      custom_bill_no: Optional[int] = None) -> int:
+    """
+    Creates a simplified traditional 'Kachu Khatu' (કાચું ખાતું) bill and records
+    split payments (Old Gold, Old Silver, Cash, UPI, Cheque) + Round Off/Kasar directly into the ledger.
+    """
+    conn = get_connection()
+    try:
+        c = conn.cursor()
+
+        subtotal_paise = sum(item["amount_paise"] for item in items)
+        grand_total_paise = max(0, subtotal_paise + round_off_paise)
+        total_paid_paise = cash_paise + gold_paise + silver_paise + upi_paise + cheque_paise
+        balance_paise = max(0, grand_total_paise - total_paid_paise)
+
+        if custom_bill_no and custom_bill_no > 0:
+            bill_no = custom_bill_no
+        else:
+            bill_no = get_next_bill_number()
+
+        # Build payment breakdown description
+        active_modes = []
+        if cash_paise > 0:
+            active_modes.append(f"રોકડ: ₹{cash_paise/100:.2f}".rstrip('0').rstrip('.'))
+        if gold_paise > 0:
+            active_modes.append(f"સોનું જમા: ₹{gold_paise/100:.2f}".rstrip('0').rstrip('.'))
+        if silver_paise > 0:
+            active_modes.append(f"ચાંદી જમા: ₹{silver_paise/100:.2f}".rstrip('0').rstrip('.'))
+        if upi_paise > 0:
+            ref_str = f" ({upi_ref.strip()})" if upi_ref.strip() else ""
+            active_modes.append(f"UPI: ₹{upi_paise/100:.2f}{ref_str}".rstrip('0').rstrip('.'))
+        if cheque_paise > 0:
+            ref_str = f" ({cheque_ref.strip()})" if cheque_ref.strip() else ""
+            active_modes.append(f"ચેક: ₹{cheque_paise/100:.2f}{ref_str}".rstrip('0').rstrip('.'))
+        if balance_paise > 0:
+            active_modes.append(f"બાકી ઉધાર: ₹{balance_paise/100:.2f}".rstrip('0').rstrip('.'))
+
+        payment_summary = " | ".join(active_modes) if active_modes else "ઉધાર"
+        
+        # Determine primary mode label
+        non_zeros = [m for m in [cash_paise, gold_paise, silver_paise, upi_paise, cheque_paise] if m > 0]
+        if len(non_zeros) > 1:
+            primary_mode = "SPLIT"
+        elif cash_paise > 0:
+            primary_mode = "CASH"
+        elif gold_paise > 0:
+            primary_mode = "GOLD"
+        elif silver_paise > 0:
+            primary_mode = "SILVER"
+        elif upi_paise > 0:
+            primary_mode = "UPI"
+        elif cheque_paise > 0:
+            primary_mode = "CHEQUE"
+        else:
+            primary_mode = "UDHAR"
+
+        # Insert into bills (book_no=2 marks Kachu Khatu entry)
+        c.execute("""
+            INSERT INTO bills (
+                bill_no, book_no, bill_date, customer_id, subtotal_paise,
+                cgst_paise, sgst_paise, grand_total_paise, paid_paise,
+                balance_paise, payment_mode, payment_ref
+            ) VALUES (?, 2, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?);
+        """, (bill_no, bill_date, customer_id, subtotal_paise,
+              grand_total_paise, total_paid_paise, balance_paise,
+              primary_mode, payment_summary))
+
+        bill_id = c.lastrowid
+
+        # Insert items (zero weight/rates required)
+        for item in items:
+            c.execute("""
+                INSERT INTO bill_items (bill_id, description, hsn_code, weight_mg, rate_paise, making_paise, amount_paise)
+                VALUES (?, ?, '', 0, 0, 0, ?);
+            """, (bill_id, item["description"], item["amount_paise"]))
+
+        # 1. Full Grand Total (after round off) → UDHAR
+        round_note = ""
+        if round_off_paise != 0:
+            round_rs = round_off_paise / 100.0
+            sign = "+" if round_rs > 0 else ""
+            round_note = f" (કસર: {sign}₹{round_rs:.2f})"
+        
+        c.execute("""
+            INSERT INTO ledger (customer_id, entry_date, entry_type, amount_paise, bill_id, payment_mode, remark)
+            VALUES (?, ?, 'UDHAR', ?, ?, 'KACHU_KHATU', ?);
+        """, (customer_id, bill_date, grand_total_paise, bill_id,
+              f"કાચું ખાતું #{bill_no} (કુલ ખરીદી{round_note})"))
+
+        # 2. Itemized Split Payments → JAMA
+        if gold_paise > 0:
+            c.execute("""
+                INSERT INTO ledger (customer_id, entry_date, entry_type, amount_paise, bill_id, payment_mode, remark)
+                VALUES (?, ?, 'JAMA', ?, ?, 'OLD_GOLD', ?);
+            """, (customer_id, bill_date, gold_paise, bill_id,
+                  f"કાચું ખાતું #{bill_no} - જૂનું સોનું જમા (Old Gold)"))
+
+        if silver_paise > 0:
+            c.execute("""
+                INSERT INTO ledger (customer_id, entry_date, entry_type, amount_paise, bill_id, payment_mode, remark)
+                VALUES (?, ?, 'JAMA', ?, ?, 'OLD_SILVER', ?);
+            """, (customer_id, bill_date, silver_paise, bill_id,
+                  f"કાચું ખાતું #{bill_no} - જૂની ચાંદી જમા (Old Silver)"))
+
+        if cash_paise > 0:
+            c.execute("""
+                INSERT INTO ledger (customer_id, entry_date, entry_type, amount_paise, bill_id, payment_mode, remark)
+                VALUES (?, ?, 'JAMA', ?, ?, 'CASH', ?);
+            """, (customer_id, bill_date, cash_paise, bill_id,
+                  f"કાચું ખાતું #{bill_no} - રોકડ જમા (Cash)"))
+
+        if upi_paise > 0:
+            rem = f"કાચું ખાતું #{bill_no} - UPI જમા"
+            if upi_ref.strip():
+                rem += f" ({upi_ref.strip()})"
+            c.execute("""
+                INSERT INTO ledger (customer_id, entry_date, entry_type, amount_paise, bill_id, payment_mode, remark, payment_ref)
+                VALUES (?, ?, 'JAMA', ?, ?, 'UPI', ?, ?);
+            """, (customer_id, bill_date, upi_paise, bill_id, rem, upi_ref.strip()))
+
+        if cheque_paise > 0:
+            rem = f"કાચું ખાતું #{bill_no} - ચેક જમા"
+            if cheque_ref.strip():
+                rem += f" ({cheque_ref.strip()})"
+            c.execute("""
+                INSERT INTO ledger (customer_id, entry_date, entry_type, amount_paise, bill_id, payment_mode, remark, payment_ref)
+                VALUES (?, ?, 'JAMA', ?, ?, 'CHEQUE', ?, ?);
+            """, (customer_id, bill_date, cheque_paise, bill_id, rem, cheque_ref.strip()))
+
+        conn.commit()
+        return bill_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
 # ----------------- Dashboard Analytics -----------------
 
 def get_dashboard_metrics() -> Dict:
