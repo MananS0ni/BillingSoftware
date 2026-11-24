@@ -73,9 +73,9 @@ class BillDetailsDialog(QDialog):
         layout.addWidget(lbl_items)
 
         table = QTableWidget()
-        table.setColumnCount(5)
+        table.setColumnCount(6)
         table.setHorizontalHeaderLabels([
-            t("th_desc"), t("th_hsn"), t("th_weight"), t("th_rate"), t("th_amount")
+            t("th_desc"), t("th_hsn"), t("th_weight"), t("th_rate"), t("th_making"), t("th_amount")
         ])
         h = table.horizontalHeader()
         h.setSectionResizeMode(0, QHeaderView.Stretch)
@@ -83,6 +83,7 @@ class BillDetailsDialog(QDialog):
         h.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         h.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         h.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        h.setSectionResizeMode(5, QHeaderView.ResizeToContents)
         table.verticalHeader().setDefaultSectionSize(34)
         table.setEditTriggers(QTableWidget.NoEditTriggers)
 
@@ -97,8 +98,11 @@ class BillDetailsDialog(QDialog):
             rate = item["rate_paise"] / 100.0
             table.setItem(row_idx, 3, QTableWidgetItem(f"₹ {rate:,.2f}"))
 
+            lab = item.get("making_paise", 0) / 100.0
+            table.setItem(row_idx, 4, QTableWidgetItem(f"₹ {lab:,.2f}" if lab > 0 else "₹ 0.00"))
+
             amt = item["amount_paise"] / 100.0
-            table.setItem(row_idx, 4, QTableWidgetItem(f"₹ {amt:,.2f}"))
+            table.setItem(row_idx, 5, QTableWidgetItem(f"₹ {amt:,.2f}"))
 
         layout.addWidget(table)
 

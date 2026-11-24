@@ -275,7 +275,7 @@ class KhatabookView(QWidget):
         self.lbl_form_making.setProperty("class", "FormLabel")
         self.txt_making = QLineEdit()
         self.txt_making.setFixedHeight(28)
-        self.txt_making.setPlaceholderText("e.g. 2000")
+        self.txt_making.setPlaceholderText(t("ph_making"))
         self.txt_making.textChanged.connect(self.calculate_row_amount)
         item_grid.addWidget(self.lbl_form_making, 2, 2)
         item_grid.addWidget(self.txt_making, 3, 2)
@@ -569,9 +569,10 @@ class KhatabookView(QWidget):
         try:
             wt = float(self.txt_weight.text() or 0)
             rate = float(self.txt_rate.text() or 0)
-            making = float(self.txt_making.text() or 0)
-            amt = round((wt * rate) + making, 2)
-            self.txt_amount.setText(str(amt))
+            making_per_g = float(self.txt_making.text() or 0)
+            # Per-gram making charge math: (Weight in grams * Rate per gram) + (Weight in grams * Making Charge per gram)
+            amt = round((wt * rate) + (wt * making_per_g), 2)
+            self.txt_amount.setText(f"{amt:.2f}".rstrip('0').rstrip('.') if amt != 0 else "0.00")
         except:
             pass
 
@@ -584,7 +585,7 @@ class KhatabookView(QWidget):
         try:
             wt = float(self.txt_weight.text() or "0")
             rate = float(self.txt_rate.text() or "0")
-            making = float(self.txt_making.text() or "0")
+            making_per_g = float(self.txt_making.text() or "0")
         except ValueError:
             QMessageBox.warning(self, "Invalid Number", "Weight, Rate, and Making must be numbers.")
             return
@@ -597,19 +598,21 @@ class KhatabookView(QWidget):
             QMessageBox.warning(self, "Invalid Rate", "Rate cannot be negative.")
             self.txt_rate.setFocus()
             return
-        if math.isnan(making) or math.isinf(making) or making < 0:
+        if math.isnan(making_per_g) or math.isinf(making_per_g) or making_per_g < 0:
             QMessageBox.warning(self, "Invalid Making", "Making charge cannot be negative.")
             self.txt_making.setFocus()
             return
 
-        amt = round((wt * rate) + making, 2)
+        total_making = round(wt * making_per_g, 2)
+        amt = round((wt * rate) + total_making, 2)
         hsn_code = self.get_selected_hsn()
         item_dict = {
             "description": desc,
             "hsn_code": hsn_code,
             "weight_mg": int(round(wt * 1000)),
             "rate_paise": int(round(rate * 100)),
-            "making_paise": int(round(making * 100)),
+            "making_per_g_paise": int(round(making_per_g * 100)),
+            "making_paise": int(round(total_making * 100)),
             "amount_paise": int(round(amt * 100))
         }
         self.items_data.append(item_dict)
@@ -620,7 +623,10 @@ class KhatabookView(QWidget):
         self.table_items.setItem(row, 1, QTableWidgetItem(item_dict["hsn_code"] or "-"))
         self.table_items.setItem(row, 2, QTableWidgetItem(f"{wt:.3f} g"))
         self.table_items.setItem(row, 3, QTableWidgetItem(format_inr(rate)))
-        self.table_items.setItem(row, 4, QTableWidgetItem(format_inr(making)))
+        making_display = f"₹ {making_per_g:,.0f}/g ({format_inr(total_making)})" if making_per_g > 0 else "₹ 0"
+        making_item = QTableWidgetItem(making_display)
+        making_item.setToolTip(f"દર: ₹ {making_per_g:,.2f}/g × {wt:.3f} g = ₹ {total_making:,.2f}")
+        self.table_items.setItem(row, 4, making_item)
         self.table_items.setItem(row, 5, QTableWidgetItem(format_inr(amt)))
 
         btn_del = QPushButton("❌")
@@ -861,7 +867,7 @@ class KhatabookView(QWidget):
         self.btn_live_rate.setText(t("btn_live_rate"))
         self.txt_rate.setPlaceholderText(t("ph_item_rate"))
         self.lbl_form_making.setText(t("lbl_making"))
-        self.txt_making.setPlaceholderText("e.g. 2000")
+        self.txt_making.setPlaceholderText(t("ph_making"))
         self.lbl_form_amt.setText(t("lbl_amount"))
         self.btn_add_item.setText(t("btn_add_item_to_table"))
 

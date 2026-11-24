@@ -104,7 +104,7 @@ def create_advisor_pdf():
             <b>STAGE 1: Line Item Calculation</b><br>
             • User inputs: <b>Weight in Grams</b> (e.g., 20.500 g) and <b>Gold/Silver Rate</b>.<br>
             • Standard Gold Rate Unit: Quoted per 10 grams (standard bullion quote in Gujarat).<br>
-            • Item Amount Formula: <code>Amount = Weight_Grams × (Rate_per_10g ÷ 10) + Making_Charges</code><br><br>
+            • Item Amount Formula: <code>Amount = Weight_Grams × (Rate_per_Gram + Making_Charge_per_Gram)</code><br><br>
 
             <b>STAGE 2: Subtotal</b><br>
             • <code>Subtotal = Sum of all Line Item Amounts</code><br><br>
