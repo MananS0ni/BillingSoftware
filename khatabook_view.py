@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
     QPushButton, QTableWidget, QTableWidgetItem, QHeaderView,
     QComboBox, QMessageBox, QFrame, QGridLayout, QCheckBox,
-    QDateEdit
+    QDateEdit, QScrollArea
 )
 from PySide6.QtCore import Qt, QDate, QEvent
 from datetime import datetime
@@ -57,9 +57,20 @@ class KhatabookView(QWidget):
         self.reset_form()
 
     def init_ui(self):
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(20, 16, 20, 16)
-        main_layout.setSpacing(14)
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.NoFrame)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
+        content_widget = QWidget()
+        main_layout = QVBoxLayout(content_widget)
+        main_layout.setContentsMargins(14, 10, 14, 10)
+        main_layout.setSpacing(8)
 
         # 1. Top Header Row
         top_bar = QHBoxLayout()
@@ -70,7 +81,7 @@ class KhatabookView(QWidget):
 
         title_box = QVBoxLayout()
         self.lbl_screen_title = QLabel(t("khatabook_title"))
-        self.lbl_screen_title.setStyleSheet("font-size: 20px; font-weight: bold; margin-left: 10px; color: #D4AF37;")
+        self.lbl_screen_title.setStyleSheet("font-size: 18px; font-weight: bold; margin-left: 10px; color: #D4AF37;")
         self.lbl_screen_subtitle = QLabel(t("khatabook_subtitle"))
         self.lbl_screen_subtitle.setStyleSheet("font-size: 12px; color: #94A3B8; margin-left: 10px;")
         title_box.addWidget(self.lbl_screen_title)
@@ -82,44 +93,45 @@ class KhatabookView(QWidget):
         self.lbl_badge = QLabel("📖 KHATABOOK")
         self.lbl_badge.setStyleSheet(
             "font-size: 14px; font-weight: bold; background: #0B1E19; color: #D4AF37; "
-            "padding: 6px 16px; border: 1.5px solid #D4AF37; border-radius: 8px;"
+            "padding: 5px 14px; border: 1.5px solid #D4AF37; border-radius: 8px;"
         )
         top_bar.addWidget(self.lbl_badge)
         main_layout.addLayout(top_bar)
 
         # 2. Main Two-Column Split Layout
         split_layout = QHBoxLayout()
-        split_layout.setSpacing(16)
+        split_layout.setSpacing(12)
 
         # ================= LEFT COLUMN: Data Entry =================
         left_column = QVBoxLayout()
-        left_column.setSpacing(14)
+        left_column.setSpacing(10)
 
         # --- Card A: Bill Meta & Customer Info ---
         self.card_cust = QFrame()
         self.card_cust.setObjectName("CardFrame")
         cust_layout = QVBoxLayout(self.card_cust)
-        cust_layout.setContentsMargins(16, 14, 16, 14)
-        cust_layout.setSpacing(10)
+        cust_layout.setContentsMargins(12, 8, 12, 8)
+        cust_layout.setSpacing(6)
 
         # Row 1: Bill Date & Bill Number
         meta_grid = QGridLayout()
-        meta_grid.setSpacing(10)
+        meta_grid.setSpacing(6)
 
         self.lbl_bill_date = QLabel(t("lbl_bill_date"))
         self.lbl_bill_date.setProperty("class", "FormLabel")
         self.date_bill = QDateEdit()
         self.date_bill.setCalendarPopup(True)
-        self.date_bill.setDisplayFormat("yyyy-MM-dd")
+        self.date_bill.setDisplayFormat("dd-MM-yyyy")
         self.date_bill.setDate(QDate.currentDate())
+        self.date_bill.setFixedHeight(28)
         self.date_bill.setStyleSheet("""
             QDateEdit {
                 background-color: #FFFDF9;
-                border: 1.5px solid #D4AF37;
+                border: 1.5px solid #94A3B8;
                 border-radius: 6px;
-                padding: 6px 10px;
+                padding: 4px 8px;
                 font-weight: bold;
-                font-size: 14px;
+                font-size: 13px;
                 color: #0F172A;
             }
         """)
@@ -129,15 +141,16 @@ class KhatabookView(QWidget):
         self.lbl_bill_no = QLabel(t("lbl_custom_bill_no"))
         self.lbl_bill_no.setProperty("class", "FormLabel")
         self.txt_bill_no = QLineEdit()
+        self.txt_bill_no.setFixedHeight(28)
         self.txt_bill_no.setPlaceholderText("e.g. 102")
         self.txt_bill_no.setStyleSheet("""
             QLineEdit {
                 background-color: #FFFDF9;
-                border: 1.5px solid #D4AF37;
+                border: 1.5px solid #94A3B8;
                 border-radius: 6px;
-                padding: 6px 10px;
+                padding: 4px 8px;
                 font-weight: bold;
-                font-size: 14px;
+                font-size: 13px;
                 color: #0F172A;
             }
         """)
@@ -149,6 +162,7 @@ class KhatabookView(QWidget):
         self.lbl_cust_phone.setProperty("class", "FormLabel")
         self.txt_cust_phone = QLineEdit()
         self.txt_cust_phone.setMaxLength(10)
+        self.txt_cust_phone.setFixedHeight(28)
         self.txt_cust_phone.setPlaceholderText(t("ph_cust_phone"))
         self.txt_cust_phone.textChanged.connect(self.on_phone_changed)
         meta_grid.addWidget(self.lbl_cust_phone, 0, 2)
@@ -158,6 +172,7 @@ class KhatabookView(QWidget):
         self.lbl_cust_name = QLabel(t("lbl_cust_name"))
         self.lbl_cust_name.setProperty("class", "FormLabel")
         self.txt_cust_name = QLineEdit()
+        self.txt_cust_name.setFixedHeight(28)
         self.txt_cust_name.setPlaceholderText(t("ph_cust_name"))
         meta_grid.addWidget(self.lbl_cust_name, 2, 0, 1, 2)
         meta_grid.addWidget(self.txt_cust_name, 3, 0, 1, 2)
@@ -166,6 +181,7 @@ class KhatabookView(QWidget):
         self.lbl_cust_addr = QLabel(t("lbl_cust_address"))
         self.lbl_cust_addr.setProperty("class", "FormLabel")
         self.txt_cust_address = QLineEdit()
+        self.txt_cust_address.setFixedHeight(28)
         self.txt_cust_address.setPlaceholderText(t("ph_cust_addr"))
         meta_grid.addWidget(self.lbl_cust_addr, 2, 2)
         meta_grid.addWidget(self.txt_cust_address, 3, 2)
@@ -177,20 +193,21 @@ class KhatabookView(QWidget):
         self.card_item = QFrame()
         self.card_item.setObjectName("CardFrame")
         item_card_layout = QVBoxLayout(self.card_item)
-        item_card_layout.setContentsMargins(16, 14, 16, 14)
-        item_card_layout.setSpacing(10)
+        item_card_layout.setContentsMargins(12, 8, 12, 8)
+        item_card_layout.setSpacing(6)
 
         self.lbl_card_item_title = QLabel(t("card_item_entry"))
         self.lbl_card_item_title.setObjectName("CardHeaderTitle")
         item_card_layout.addWidget(self.lbl_card_item_title)
 
         item_grid = QGridLayout()
-        item_grid.setSpacing(10)
+        item_grid.setSpacing(6)
 
         # Description + HSN
         self.lbl_form_desc = QLabel(t("lbl_item_desc"))
         self.lbl_form_desc.setProperty("class", "FormLabel")
         self.txt_item_desc = QLineEdit()
+        self.txt_item_desc.setFixedHeight(28)
         self.txt_item_desc.setPlaceholderText(t("ph_item_desc"))
         item_grid.addWidget(self.lbl_form_desc, 0, 0, 1, 2)
         item_grid.addWidget(self.txt_item_desc, 1, 0, 1, 2)
@@ -203,6 +220,7 @@ class KhatabookView(QWidget):
             self.cmb_hsn.addItem(label, code)
         self.cmb_hsn.setCurrentIndex(0)
         self.cmb_hsn.setMinimumWidth(280)
+        self.cmb_hsn.setFixedHeight(28)
         item_grid.addWidget(self.lbl_form_hsn, 0, 2, 1, 3)
         item_grid.addWidget(self.cmb_hsn, 1, 2, 1, 3)
 
@@ -210,6 +228,7 @@ class KhatabookView(QWidget):
         self.lbl_form_wt = QLabel(t("lbl_weight"))
         self.lbl_form_wt.setProperty("class", "FormLabel")
         self.txt_weight = QLineEdit()
+        self.txt_weight.setFixedHeight(28)
         self.txt_weight.setPlaceholderText("e.g. 50.000")
         self.txt_weight.textChanged.connect(self.calculate_row_amount)
         item_grid.addWidget(self.lbl_form_wt, 2, 0)
@@ -242,6 +261,7 @@ class KhatabookView(QWidget):
         rate_hdr_box.addWidget(self.btn_live_rate)
 
         self.txt_rate = QLineEdit()
+        self.txt_rate.setFixedHeight(28)
         self.txt_rate.setPlaceholderText("e.g. 7300")
         self.txt_rate.textChanged.connect(self.calculate_row_amount)
         item_grid.addLayout(rate_hdr_box, 2, 1)
@@ -250,6 +270,7 @@ class KhatabookView(QWidget):
         self.lbl_form_making = QLabel(t("lbl_making"))
         self.lbl_form_making.setProperty("class", "FormLabel")
         self.txt_making = QLineEdit()
+        self.txt_making.setFixedHeight(28)
         self.txt_making.setPlaceholderText("e.g. 2000")
         self.txt_making.textChanged.connect(self.calculate_row_amount)
         item_grid.addWidget(self.lbl_form_making, 2, 2)
@@ -258,6 +279,7 @@ class KhatabookView(QWidget):
         self.lbl_form_amt = QLabel(t("lbl_amount"))
         self.lbl_form_amt.setProperty("class", "FormLabel")
         self.txt_amount = QLineEdit()
+        self.txt_amount.setFixedHeight(28)
         self.txt_amount.setPlaceholderText("0.00")
         self.txt_amount.setStyleSheet("background-color: #FFFDF9; font-weight: bold; font-size: 15px; color: #0B1E19; border: 2px solid #D4AF37;")
         item_grid.addWidget(self.lbl_form_amt, 2, 3)
@@ -265,6 +287,7 @@ class KhatabookView(QWidget):
 
         self.btn_add_item = QPushButton(t("btn_add_item_to_table"))
         self.btn_add_item.setObjectName("PrimaryBtn")
+        self.btn_add_item.setFixedHeight(28)
         self.btn_add_item.setCursor(Qt.PointingHandCursor)
         self.btn_add_item.clicked.connect(self.add_item_to_table)
         item_grid.addWidget(self.btn_add_item, 3, 4)
@@ -276,6 +299,9 @@ class KhatabookView(QWidget):
         self.table_items = QTableWidget()
         self.table_items.setColumnCount(7)
         self.setup_table_headers()
+        self.table_items.setMinimumHeight(180)
+        self.table_items.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.table_items.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         
         th = self.table_items.horizontalHeader()
         th.setSectionResizeMode(0, QHeaderView.Stretch)
@@ -285,7 +311,7 @@ class KhatabookView(QWidget):
         th.setSectionResizeMode(4, QHeaderView.ResizeToContents)
         th.setSectionResizeMode(5, QHeaderView.ResizeToContents)
         th.setSectionResizeMode(6, QHeaderView.ResizeToContents)
-        self.table_items.verticalHeader().setDefaultSectionSize(36)
+        self.table_items.verticalHeader().setDefaultSectionSize(32)
 
         left_column.addWidget(self.table_items, stretch=1)
         split_layout.addLayout(left_column, stretch=6)
@@ -293,12 +319,12 @@ class KhatabookView(QWidget):
         # ================= RIGHT COLUMN: Khata Summary & Save =================
         self.card_invoice = QFrame()
         self.card_invoice.setObjectName("InvoiceSlipCard")
-        self.card_invoice.setMinimumWidth(340)
-        self.card_invoice.setMaximumWidth(400)
+        self.card_invoice.setMinimumWidth(300)
+        self.card_invoice.setMaximumWidth(350)
         
         inv_layout = QVBoxLayout(self.card_invoice)
-        inv_layout.setContentsMargins(18, 16, 18, 16)
-        inv_layout.setSpacing(12)
+        inv_layout.setContentsMargins(12, 10, 12, 10)
+        inv_layout.setSpacing(6)
 
         self.lbl_inv_title = QLabel(t("card_invoice_summary"))
         self.lbl_inv_title.setObjectName("CardHeaderTitle")
@@ -307,13 +333,13 @@ class KhatabookView(QWidget):
         # GST Toggle Checkbox (Default False for traditional Khata)
         self.chk_apply_gst = QCheckBox(t("lbl_apply_gst"))
         self.chk_apply_gst.setChecked(False)  # Traditional Khata default: 0% GST
-        self.chk_apply_gst.setStyleSheet("font-weight: bold; margin-bottom: 6px;")
+        self.chk_apply_gst.setStyleSheet("font-weight: bold; margin-bottom: 2px; font-size: 12px;")
         self.chk_apply_gst.stateChanged.connect(self.update_totals_display)
         inv_layout.addWidget(self.chk_apply_gst)
 
         # Summary Rows (Subtotal, CGST, SGST)
         summary_grid = QGridLayout()
-        summary_grid.setSpacing(8)
+        summary_grid.setSpacing(4)
 
         self.lbl_subtotal_tag = QLabel(t("lbl_subtotal"))
         self.lbl_subtotal_val = QLabel("₹ 0.00")
@@ -340,10 +366,11 @@ class KhatabookView(QWidget):
         total_pill = QFrame()
         total_pill.setObjectName("GrandTotalPill")
         pill_layout = QVBoxLayout(total_pill)
-        pill_layout.setContentsMargins(12, 10, 12, 10)
+        pill_layout.setContentsMargins(10, 6, 10, 6)
+        pill_layout.setSpacing(2)
         
         self.lbl_grand_tag = QLabel(t("lbl_grand_total"))
-        self.lbl_grand_tag.setStyleSheet("color: #FFFFFF; font-size: 13px; font-weight: bold;")
+        self.lbl_grand_tag.setStyleSheet("color: #FFFFFF; font-size: 12px; font-weight: bold;")
         self.lbl_grand_val = QLabel("₹ 0.00")
         self.lbl_grand_val.setObjectName("GrandTotalNumber")
         pill_layout.addWidget(self.lbl_grand_tag)
@@ -352,11 +379,12 @@ class KhatabookView(QWidget):
 
         # Paid Now & Balance Due
         pay_grid = QGridLayout()
-        pay_grid.setSpacing(8)
+        pay_grid.setSpacing(5)
 
         self.lbl_paid_tag = QLabel(t("lbl_paid_now"))
         self.lbl_paid_tag.setProperty("class", "FormLabel")
         self.txt_paid = QLineEdit()
+        self.txt_paid.setFixedHeight(28)
         self.txt_paid.setPlaceholderText(t("ph_paid_now"))
         self.txt_paid.textChanged.connect(self.update_totals_display)
         pay_grid.addWidget(self.lbl_paid_tag, 0, 0)
@@ -365,13 +393,14 @@ class KhatabookView(QWidget):
         self.lbl_due_tag = QLabel(t("lbl_balance_due"))
         self.lbl_due_tag.setProperty("class", "FormLabel")
         self.lbl_due_val = QLabel("₹ 0.00")
-        self.lbl_due_val.setStyleSheet("color: #DC2626; font-size: 16px; font-weight: bold;")
+        self.lbl_due_val.setStyleSheet("color: #DC2626; font-size: 15px; font-weight: bold;")
         pay_grid.addWidget(self.lbl_due_tag, 1, 0)
         pay_grid.addWidget(self.lbl_due_val, 1, 1)
 
         self.lbl_mode_tag = QLabel(t("lbl_pay_mode"))
         self.lbl_mode_tag.setProperty("class", "FormLabel")
         self.cmb_mode = QComboBox()
+        self.cmb_mode.setFixedHeight(28)
         self.cmb_mode.addItems(["CASH", "CREDIT / UDHAR", "UPI", "CHEQUE"])
         pay_grid.addWidget(self.lbl_mode_tag, 2, 0)
         pay_grid.addWidget(self.cmb_mode, 2, 1)
@@ -379,6 +408,7 @@ class KhatabookView(QWidget):
         self.lbl_ref_tag = QLabel(t("lbl_payment_ref"))
         self.lbl_ref_tag.setProperty("class", "FormLabel")
         self.txt_payment_ref = QLineEdit()
+        self.txt_payment_ref.setFixedHeight(28)
         self.txt_payment_ref.setPlaceholderText(t("ph_upi_ref"))
         pay_grid.addWidget(self.lbl_ref_tag, 3, 0)
         pay_grid.addWidget(self.txt_payment_ref, 3, 1)
@@ -391,11 +421,12 @@ class KhatabookView(QWidget):
 
         # Action Buttons
         btn_box = QVBoxLayout()
-        btn_box.setSpacing(10)
+        btn_box.setSpacing(6)
 
         # 1. Primary Gold Button: Save to Khatabook (No Print Pop-up)
         self.btn_save_khata = QPushButton(t("btn_save_khatabook"))
         self.btn_save_khata.setObjectName("GoldActionBtn")
+        self.btn_save_khata.setFixedHeight(36)
         self.btn_save_khata.setCursor(Qt.PointingHandCursor)
         self.btn_save_khata.clicked.connect(lambda: self.save_khata_bill(with_print=False))
         btn_box.addWidget(self.btn_save_khata)
@@ -403,6 +434,7 @@ class KhatabookView(QWidget):
         # 2. Secondary Button: Save & Print
         self.btn_save_print = QPushButton(t("btn_save_khatabook_print"))
         self.btn_save_print.setObjectName("PrimaryBtn")
+        self.btn_save_print.setFixedHeight(32)
         self.btn_save_print.setCursor(Qt.PointingHandCursor)
         self.btn_save_print.clicked.connect(lambda: self.save_khata_bill(with_print=True))
         btn_box.addWidget(self.btn_save_print)
@@ -422,6 +454,9 @@ class KhatabookView(QWidget):
 
         split_layout.addWidget(self.card_invoice, stretch=3)
         main_layout.addLayout(split_layout)
+
+        scroll_area.setWidget(content_widget)
+        outer_layout.addWidget(scroll_area)
 
     def get_selected_hsn(self) -> str:
         txt = self.cmb_hsn.currentText().strip()

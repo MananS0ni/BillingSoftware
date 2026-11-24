@@ -22,7 +22,7 @@ from database import (
     add_purchase, add_urd_purchase, get_purchases, delete_purchase,
     get_purchase_by_id, get_next_urd_voucher_number, get_all_customers
 )
-from format_utils import format_inr
+from format_utils import format_inr, format_date_dmy
 from print_manager import print_or_pdf_urd_voucher
 
 # ----------------- URD Customer Old Gold Purchase Dialog -----------------
@@ -124,7 +124,7 @@ class AddURDPurchaseDialog(QDialog):
         self.dt_date = QDateEdit()
         self.dt_date.setCalendarPopup(True)
         self.dt_date.setDate(QDate.currentDate())
-        self.dt_date.setDisplayFormat("yyyy-MM-dd")
+        self.dt_date.setDisplayFormat("dd-MM-yyyy")
 
         top_row.addWidget(self.txt_voucher)
         top_row.addWidget(QLabel(t("lbl_date_colon")))
@@ -486,7 +486,7 @@ class AddPurchaseDialog(QDialog):
         self.dt_date = QDateEdit()
         self.dt_date.setCalendarPopup(True)
         self.dt_date.setDate(QDate.currentDate())
-        self.dt_date.setDisplayFormat("yyyy-MM-dd")
+        self.dt_date.setDisplayFormat("dd-MM-yyyy")
         form.addRow(t("lbl_purchase_date"), self.dt_date)
 
         self.txt_desc = QLineEdit()
@@ -818,7 +818,7 @@ class PurchasesView(QWidget):
 
         for row_idx, p in enumerate(purchases):
             self.table.insertRow(row_idx)
-            self.table.setItem(row_idx, 0, QTableWidgetItem(p["purchase_date"]))
+            self.table.setItem(row_idx, 0, QTableWidgetItem(format_date_dmy(p["purchase_date"])))
             self.table.setItem(row_idx, 1, QTableWidgetItem(f"#{p['invoice_no']}"))
 
             # Type Badge (URD vs DEALER)

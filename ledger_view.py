@@ -13,7 +13,7 @@ from PySide6.QtCore import Qt
 from translations import t
 from database import search_customers, get_customer_ledger, get_customer_balance, add_payment
 from bill_details_dialog import BillDetailsDialog
-from format_utils import format_inr
+from format_utils import format_inr, format_date_dmy
 
 class AddPaymentDialog(QDialog):
     def __init__(self, customer_id=None, customer_name=None, parent=None):
@@ -251,7 +251,7 @@ class LedgerView(QWidget):
         self.table.setRowCount(0)
         for row_idx, e in enumerate(entries):
             self.table.insertRow(row_idx)
-            self.table.setItem(row_idx, 0, QTableWidgetItem(e["entry_date"]))
+            self.table.setItem(row_idx, 0, QTableWidgetItem(format_date_dmy(e["entry_date"])))
             
             t_item = QTableWidgetItem(e["entry_type"])
             t_item.setForeground(Qt.red if e["entry_type"] == "UDHAR" else Qt.darkGreen)

@@ -12,7 +12,7 @@ from translations import t
 from database import get_bill_full_details, get_customer_balance
 from print_manager import print_or_pdf_bill, export_bill_to_pdf
 from whatsapp_manager import get_whatsapp_status, send_bill_async, ensure_bridge_running
-from format_utils import get_caption
+from format_utils import get_caption, format_date_dmy
 from app_paths import INVOICES_DIR
 
 class BillDetailsDialog(QDialog):
@@ -42,7 +42,7 @@ class BillDetailsDialog(QDialog):
 
         top_box.addStretch()
 
-        lbl_date = QLabel(f"📅 {self.bill_data['bill_date']}")
+        lbl_date = QLabel(f"📅 {format_date_dmy(self.bill_data['bill_date'])}")
         lbl_date.setStyleSheet("font-size: 14px; font-weight: bold; color: #6E7A75;")
         top_box.addWidget(lbl_date)
         layout.addLayout(top_box)

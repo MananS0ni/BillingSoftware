@@ -13,7 +13,7 @@ from PySide6.QtCore import Qt
 from translations import t
 from database import get_dashboard_metrics
 from bill_details_dialog import BillDetailsDialog
-from format_utils import format_inr
+from format_utils import format_inr, format_date_dmy
 
 class DashboardView(QWidget):
     def __init__(self, on_new_bill_callback, on_customers_callback):
@@ -25,17 +25,17 @@ class DashboardView(QWidget):
 
     def init_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(24, 20, 24, 20)
-        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(16, 10, 16, 10)
+        main_layout.setSpacing(10)
 
         # 1. Top Greeting & Quick Actions Bar
         top_bar = QHBoxLayout()
         
         greeting_box = QVBoxLayout()
         self.lbl_welcome = QLabel(t("nav_dashboard"))
-        self.lbl_welcome.setStyleSheet("font-size: 22px; font-weight: bold; color: #0B1E19;")
+        self.lbl_welcome.setStyleSheet("font-size: 20px; font-weight: bold; color: #0B1E19;")
         self.lbl_subtext = QLabel(t("tagline"))
-        self.lbl_subtext.setStyleSheet("font-size: 13px; color: #6E7A75;")
+        self.lbl_subtext.setStyleSheet("font-size: 12px; color: #6E7A75;")
         greeting_box.addWidget(self.lbl_welcome)
         greeting_box.addWidget(self.lbl_subtext)
         top_bar.addLayout(greeting_box)
@@ -45,12 +45,14 @@ class DashboardView(QWidget):
         self.btn_quick_bill = QPushButton(t("btn_quick_bill"))
         self.btn_quick_bill.setObjectName("GoldActionBtn")
         self.btn_quick_bill.setCursor(Qt.PointingHandCursor)
+        self.btn_quick_bill.setFixedHeight(34)
         self.btn_quick_bill.clicked.connect(self.on_new_bill_callback)
         top_bar.addWidget(self.btn_quick_bill)
 
         self.btn_quick_cust = QPushButton(t("btn_quick_customer"))
         self.btn_quick_cust.setObjectName("SecondaryBtn")
         self.btn_quick_cust.setCursor(Qt.PointingHandCursor)
+        self.btn_quick_cust.setFixedHeight(34)
         self.btn_quick_cust.clicked.connect(self.on_customers_callback)
         top_bar.addWidget(self.btn_quick_cust)
 
@@ -58,7 +60,7 @@ class DashboardView(QWidget):
 
         # 2. Four Executive Stat Cards
         stats_grid = QGridLayout()
-        stats_grid.setSpacing(16)
+        stats_grid.setSpacing(10)
 
         # Card 1: Today's Sales
         self.card_sales = QFrame()
@@ -157,7 +159,7 @@ class DashboardView(QWidget):
 
         self.table_recent.setSelectionBehavior(QTableWidget.SelectRows)
         self.table_recent.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.table_recent.verticalHeader().setDefaultSectionSize(38)
+        self.table_recent.verticalHeader().setDefaultSectionSize(32)
         main_layout.addWidget(self.table_recent)
 
     def setup_table_headers(self):
@@ -197,7 +199,7 @@ class DashboardView(QWidget):
         for row_idx, b in enumerate(metrics["recent_bills"]):
             self.table_recent.insertRow(row_idx)
             self.table_recent.setItem(row_idx, 0, QTableWidgetItem(f"#{b['bill_no']}"))
-            self.table_recent.setItem(row_idx, 1, QTableWidgetItem(b["bill_date"]))
+            self.table_recent.setItem(row_idx, 1, QTableWidgetItem(format_date_dmy(b["bill_date"])))
             
             cust_name = b["name_gu"]
             if b.get("mobile"):

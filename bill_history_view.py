@@ -23,7 +23,7 @@ from PySide6.QtCore import Qt, QDate
 
 from translations import t
 from database import get_all_bills_history, get_bill_full_details
-from format_utils import format_inr, get_caption
+from format_utils import format_inr, get_caption, format_date_dmy
 from bill_details_dialog import BillDetailsDialog
 from print_manager import print_or_pdf_bill, export_bill_to_pdf
 from whatsapp_manager import send_bill_async, get_whatsapp_status
@@ -134,9 +134,10 @@ class BillHistoryView(QWidget):
 
         self.date_from = QDateEdit()
         self.date_from.setCalendarPopup(True)
-        self.date_from.setDisplayFormat("yyyy-MM-dd")
+        self.date_from.setDisplayFormat("dd-MM-yyyy")
         self.date_from.setMinimumWidth(125)
-        self.date_from.setStyleSheet("padding: 4px 8px; font-weight: bold; font-size: 13px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 4px;")
+        self.date_from.setFixedHeight(32)
+        self.date_from.setStyleSheet("padding: 4px 8px; font-weight: bold; font-size: 13px; background: #FFFFFF; border: 1.5px solid #94A3B8; border-radius: 6px;")
         self.date_from.setDate(QDate.currentDate().addDays(-30))
         filter_layout.addWidget(self.date_from)
 
@@ -146,16 +147,19 @@ class BillHistoryView(QWidget):
 
         self.date_to = QDateEdit()
         self.date_to.setCalendarPopup(True)
-        self.date_to.setDisplayFormat("yyyy-MM-dd")
+        self.date_to.setDisplayFormat("dd-MM-yyyy")
         self.date_to.setMinimumWidth(125)
-        self.date_to.setStyleSheet("padding: 4px 8px; font-weight: bold; font-size: 13px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 4px;")
+        self.date_to.setFixedHeight(32)
+        self.date_to.setStyleSheet("padding: 4px 8px; font-weight: bold; font-size: 13px; background: #FFFFFF; border: 1.5px solid #94A3B8; border-radius: 6px;")
         self.date_to.setDate(QDate.currentDate())
         filter_layout.addWidget(self.date_to)
 
         self.btn_apply = QPushButton(t("btn_apply_filter"))
         self.btn_apply.setObjectName("PrimaryBtn")
         self.btn_apply.setCursor(Qt.PointingHandCursor)
-        self.btn_apply.setStyleSheet("padding: 6px 16px; font-weight: bold;")
+        self.btn_apply.setMinimumWidth(130)
+        self.btn_apply.setFixedHeight(32)
+        self.btn_apply.setStyleSheet("padding: 6px 14px; font-weight: bold; font-size: 13px;")
         self.btn_apply.clicked.connect(lambda: self.set_preset("custom"))
         filter_layout.addWidget(self.btn_apply)
 
@@ -196,7 +200,7 @@ class BillHistoryView(QWidget):
 
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.table.verticalHeader().setDefaultSectionSize(42)
+        self.table.verticalHeader().setDefaultSectionSize(36)
         layout.addWidget(self.table)
 
         self.update_preset_button_styles()
@@ -208,7 +212,7 @@ class BillHistoryView(QWidget):
                 background-color: #FFFFFF;
                 border: 1.5px solid #E8E4DC;
                 border-radius: 8px;
-                padding: 10px 14px;
+                padding: 6px 12px;
             }}
         """)
         c_layout = QVBoxLayout(card)
@@ -307,7 +311,7 @@ class BillHistoryView(QWidget):
             self.table.setItem(row_idx, 1, item_no)
 
             # 2. Date
-            item_dt = QTableWidgetItem(b["bill_date"])
+            item_dt = QTableWidgetItem(format_date_dmy(b["bill_date"]))
             item_dt.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(row_idx, 2, item_dt)
 

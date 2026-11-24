@@ -38,8 +38,8 @@ class MainWindow(QMainWindow):
         shop_gu = st.get("shop_name_gu") or "સોની નટવરલાલ હિંમતલાલ"
         shop_en = st.get("shop_name_en") or "Soni Natvarlal Himmatlal"
         self.setWindowTitle(f"{shop_en} - {shop_gu}")
-        self.resize(1200, 780)
-        self.setMinimumSize(1024, 700)
+        self.resize(1200, 720)
+        self.setMinimumSize(1024, 640)
         
         init_db()
 
@@ -93,7 +93,7 @@ class MainWindow(QMainWindow):
         header = QFrame()
         header.setObjectName("TopHeaderBar")
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(24, 12, 24, 12)
+        header_layout.setContentsMargins(16, 8, 16, 8)
 
         title_box = QVBoxLayout()
         title_row = QHBoxLayout()
@@ -151,10 +151,10 @@ class MainWindow(QMainWindow):
         # Left Sidebar
         self.sidebar = QFrame()
         self.sidebar.setObjectName("LeftSidebar")
-        self.sidebar.setFixedWidth(248)
+        self.sidebar.setFixedWidth(210)
         side_layout = QVBoxLayout(self.sidebar)
-        side_layout.setContentsMargins(0, 16, 0, 16)
-        side_layout.setSpacing(4)
+        side_layout.setContentsMargins(0, 10, 0, 10)
+        side_layout.setSpacing(2)
 
         self.btn_nav_dashboard = QPushButton(f"  📊  {t('nav_dashboard')}")
         self.btn_nav_dashboard.setProperty("class", "NavButton")
@@ -337,7 +337,7 @@ class MainWindow(QMainWindow):
         for 24K, 22K (916), 18K Gold, Silver Lagdi, and live direction indicators.
         """
         frame = QFrame()
-        frame.setFixedHeight(38)
+        frame.setFixedHeight(32)
         frame.setStyleSheet("""
             QFrame {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #061410, stop:0.5 #0D261E, stop:1 #061410);

@@ -119,18 +119,19 @@ QLabel#CardHeaderTitle {{
 
 /* Form Input Fields with Labels */
 QLabel.FormLabel {{
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: {COLOR_TEXT};
 }}
 
 QLineEdit, QComboBox, QDateEdit {{
     background-color: #FFFFFF;
-    border: 1.5px solid {COLOR_BORDER};
-    border-radius: 8px;
-    padding: 9px 12px;
-    font-size: 14px;
-    color: {COLOR_TEXT};
+    border: 1.5px solid #94A3B8;
+    border-radius: 6px;
+    padding: 6px 10px;
+    min-height: 18px;
+    font-size: 13px;
+    color: #0F172A;
 }}
 
 QLineEdit:focus, QComboBox:focus, QDateEdit:focus {{
@@ -138,14 +139,29 @@ QLineEdit:focus, QComboBox:focus, QDateEdit:focus {{
     background-color: #FFFDF9;
 }}
 
+QLineEdit::placeholder {{
+    color: #64748B;
+    font-weight: normal;
+}}
+
+QDateEdit::drop-down {{
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 24px;
+    border-left: 1px solid #CBD5E1;
+    background: #F8FAFC;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+}}
+
 /* Action Buttons */
 QPushButton#PrimaryBtn {{
     background-color: {COLOR_PRIMARY_MED};
     color: #FFFFFF;
     border: 1px solid {COLOR_GOLD};
-    border-radius: 8px;
-    padding: 11px 22px;
-    font-size: 15px;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
     font-weight: bold;
 }}
 
@@ -158,9 +174,9 @@ QPushButton#GoldActionBtn {{
     background-color: {COLOR_GOLD};
     color: {COLOR_PRIMARY_DARK};
     border: none;
-    border-radius: 8px;
-    padding: 12px 24px;
-    font-size: 16px;
+    border-radius: 6px;
+    padding: 9px 18px;
+    font-size: 14px;
     font-weight: bold;
 }}
 
@@ -173,9 +189,9 @@ QPushButton#SecondaryBtn {{
     background-color: #EFECE6;
     color: {COLOR_TEXT};
     border: 1px solid {COLOR_BORDER};
-    border-radius: 8px;
-    padding: 10px 18px;
-    font-size: 14px;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 13px;
     font-weight: 500;
 }}
 
@@ -202,10 +218,10 @@ QPushButton#LangPillBtn:hover {{
 /* Modern Tables */
 QTableWidget {{
     background-color: #FFFFFF;
-    border: 1px solid {COLOR_BORDER};
-    border-radius: 10px;
+    border: 1.5px solid {COLOR_BORDER};
+    border-radius: 8px;
     gridline-color: #F1ECE4;
-    font-size: 14px;
+    font-size: 13px;
     selection-background-color: {COLOR_GOLD_LIGHT};
     selection-color: {COLOR_PRIMARY_DARK};
 }}
@@ -213,8 +229,9 @@ QTableWidget {{
 QHeaderView::section {{
     background-color: #F6F3EC;
     color: {COLOR_PRIMARY_DARK};
-    padding: 10px 12px;
+    padding: 8px 10px;
     font-weight: bold;
+    font-size: 12px;
     border: none;
     border-bottom: 2px solid {COLOR_BORDER};
 }}
@@ -223,19 +240,49 @@ QHeaderView::section {{
 QFrame#InvoiceSlipCard {{
     background-color: #FFFFFF;
     border: 2px solid {COLOR_GOLD};
-    border-radius: 14px;
-    padding: 18px;
+    border-radius: 12px;
+    padding: 12px;
 }}
 
 QFrame#GrandTotalPill {{
-    background-color: {COLOR_PRIMARY_DARK};
-    border: 1.5px solid {COLOR_GOLD};
-    border-radius: 10px;
-    padding: 12px;
+    background-color: #0B1E19;
+    border: 2px solid {COLOR_GOLD};
+    border-radius: 8px;
+    padding: 8px 12px;
 }}
 
 QFrame#GrandTotalPill QLabel {{
     background-color: transparent;
+}}
+
+QLabel#GrandTotalNumber {{
+    color: #F6E05E;
+    font-size: 24px;
+    font-weight: bold;
+    background: transparent;
+}}
+
+/* Clean Sleek Scrollbars */
+QScrollBar:vertical {{
+    border: none;
+    background: #F1ECE4;
+    width: 8px;
+    margin: 0px;
+    border-radius: 4px;
+}}
+
+QScrollBar::handle:vertical {{
+    background: #C5A880;
+    min-height: 25px;
+    border-radius: 4px;
+}}
+
+QScrollBar::handle:vertical:hover {{
+    background: #B08D55;
+}}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+    height: 0px;
 }}
 
 /* Calendar & Date Picker Styling */
@@ -249,12 +296,5 @@ QCalendarWidget QAbstractItemView:enabled {{
     color: {COLOR_TEXT};
     selection-background-color: {COLOR_GOLD};
     selection-color: {COLOR_PRIMARY_DARK};
-}}
-
-QLabel#GrandTotalNumber {{
-    color: {COLOR_GOLD};
-    font-size: 28px;
-    font-weight: bold;
-    background: transparent;
 }}
 """
