@@ -33,6 +33,7 @@ from print_manager import print_or_pdf_bill, export_bill_to_pdf
 from format_utils import format_inr
 from whatsapp_manager import send_bill_async, get_whatsapp_status
 from settings_manager import get_owner_phone, is_owner_copy_enabled
+from app_paths import INVOICES_DIR
 
 HSN_PRESETS = [
     ("7113 - Gold & Silver Jewellery (સોના-ચાંદીના દાગીના)", "7113"),
@@ -765,7 +766,7 @@ class KhatabookView(QWidget):
         }
 
         # Export PDF automatically
-        invoices_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "invoices")
+        invoices_dir = INVOICES_DIR
         os.makedirs(invoices_dir, exist_ok=True)
         safe_name = re.sub(r'[^a-zA-Z0-9_\u0A80-\u0AFF]', '_', cust_name)
         pdf_filename = f"Invoice_Bill_{actual_bill_no}_{safe_name}.pdf"
@@ -840,3 +841,4 @@ class KhatabookView(QWidget):
         self.lbl_ref_tag.setText(t("lbl_payment_ref"))
         self.btn_save_khata.setText(t("btn_save_khatabook"))
         self.btn_save_print.setText(t("btn_save_khatabook_print"))
+

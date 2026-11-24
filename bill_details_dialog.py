@@ -12,6 +12,7 @@ from translations import t
 from database import get_bill_full_details, get_customer_balance
 from print_manager import print_or_pdf_bill, export_bill_to_pdf
 from whatsapp_manager import get_whatsapp_status, send_bill_async, ensure_bridge_running
+from app_paths import INVOICES_DIR
 
 class BillDetailsDialog(QDialog):
     def __init__(self, bill_id: int, parent=None):
@@ -236,7 +237,7 @@ class BillDetailsDialog(QDialog):
         self.btn_wa.setText(t("msg_wa_sending"))
 
         # 5. Export PDF
-        invoices_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "invoices")
+        invoices_dir = INVOICES_DIR
         os.makedirs(invoices_dir, exist_ok=True)
         safe_name = self.bill_data["name_gu"].replace(" ", "_")[:30]
         pdf_filename = f"Bill_{bill_no}_{safe_name}.pdf"

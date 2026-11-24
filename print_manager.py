@@ -35,6 +35,7 @@ from PySide6.QtPrintSupport import QPrinter, QPrintDialog
 
 from format_utils import num_to_words_title_case
 from settings_manager import load_settings
+from app_paths import INVOICE_TEMPLATE_PATH, INVOICES_DIR
 
 _TEMPLATE_CACHE = None
 
@@ -56,7 +57,7 @@ def find_headless_browser() -> Optional[str]:
 def get_template_html() -> str:
     """Loads the base invoice template from invoice_app.html."""
     global _TEMPLATE_CACHE
-    template_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "invoice_app.html")
+    template_path = INVOICE_TEMPLATE_PATH
     if os.path.isfile(template_path):
         with open(template_path, "r", encoding="utf-8") as f:
             _TEMPLATE_CACHE = f.read()
@@ -333,7 +334,7 @@ def print_or_pdf_bill(bill_data: dict, parent_window=None, save_pdf_path: str = 
         return export_bill_to_pdf(bill_data, save_pdf_path, page_size=page_size)
 
     # Generate PDF in standard invoices directory
-    invoices_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "invoices")
+    invoices_dir = INVOICES_DIR
     os.makedirs(invoices_dir, exist_ok=True)
     cust_name = bill_data.get("customer_name") or bill_data.get("name_gu") or bill_data.get("name_en") or "Customer"
     safe_name = re.sub(r'[^a-zA-Z0-9_\u0A80-\u0AFF]', '_', str(cust_name))
@@ -771,7 +772,7 @@ def print_or_pdf_urd_voucher(urd_data: dict, parent_window=None, save_pdf_path: 
     if save_pdf_path:
         return export_urd_voucher_to_pdf(urd_data, save_pdf_path, page_size=page_size)
 
-    invoices_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "invoices")
+    invoices_dir = INVOICES_DIR
     os.makedirs(invoices_dir, exist_ok=True)
     cust_name = urd_data.get("supplier_name") or urd_data.get("customer_name") or "Customer"
     safe_name = re.sub(r'[^a-zA-Z0-9_\u0A80-\u0AFF]', '_', str(cust_name))

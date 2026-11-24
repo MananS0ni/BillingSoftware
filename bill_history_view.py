@@ -28,6 +28,7 @@ from bill_details_dialog import BillDetailsDialog
 from print_manager import print_or_pdf_bill, export_bill_to_pdf
 from whatsapp_manager import send_bill_async, get_whatsapp_status
 from settings_manager import get_owner_phone, is_owner_copy_enabled
+from app_paths import INVOICES_DIR
 
 class BillHistoryView(QWidget):
     def __init__(self, on_back_callback=None):
@@ -427,7 +428,7 @@ class BillHistoryView(QWidget):
         paid = bill_data["paid_paise"]
         due = bill_data["balance_paise"]
 
-        invoices_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "invoices")
+        invoices_dir = INVOICES_DIR
         os.makedirs(invoices_dir, exist_ok=True)
         safe_name = re.sub(r'[^a-zA-Z0-9_\u0A80-\u0AFF]', '_', cust_name)
         pdf_path = os.path.join(invoices_dir, f"Invoice_Bill_{bill_data['bill_no']}_{safe_name}.pdf")

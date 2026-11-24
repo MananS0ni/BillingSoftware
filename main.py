@@ -28,12 +28,16 @@ from whatsapp_dialog import WhatsAppDialog
 from whatsapp_manager import get_whatsapp_status, ensure_bridge_running, stop_bridge
 from rates_manager import get_rates_manager
 from rates_dialog import RatesDialog
+from settings_manager import load_settings
 import threading as _threading  # Bug 13 fix: background WA status checks
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Soni Natvarlal Himmatlal - સોની નટવરલાલ હિંમતલાલ")
+        st = load_settings()
+        shop_gu = st.get("shop_name_gu") or "સોની નટવરલાલ હિંમતલાલ"
+        shop_en = st.get("shop_name_en") or "Soni Natvarlal Himmatlal"
+        self.setWindowTitle(f"{shop_en} - {shop_gu}")
         self.resize(1200, 780)
         self.setMinimumSize(1024, 700)
         
@@ -94,7 +98,9 @@ class MainWindow(QMainWindow):
         title_box = QVBoxLayout()
         title_row = QHBoxLayout()
         
-        self.lbl_title = QLabel(t("app_title"))
+        st = load_settings()
+        shop_title = st.get("shop_name_gu") or t("app_title")
+        self.lbl_title = QLabel(shop_title)
         self.lbl_title.setObjectName("AppBrandTitle")
         title_row.addWidget(self.lbl_title)
 
@@ -291,7 +297,10 @@ class MainWindow(QMainWindow):
         toggle_language()
 
         # 1. Update Header & Shell
-        self.lbl_title.setText(t("app_title"))
+        st = load_settings()
+        from translations import active_lang
+        shop_title = (st.get("shop_name_en") if active_lang == "en" and st.get("shop_name_en") else (st.get("shop_name_gu") or t("app_title")))
+        self.lbl_title.setText(shop_title)
         self.lbl_tagline.setText(t("tagline"))
         self.lbl_shop_badge.setText(" ✨ " + t("shop_badge") + " ")
         self.btn_lang.setText(t("btn_switch_lang"))

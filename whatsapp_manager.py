@@ -12,8 +12,7 @@ import subprocess
 import threading
 import urllib.request
 import urllib.error
-
-BRIDGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bridge")
+from app_paths import BRIDGE_DIR
 STATUS_URL = "http://127.0.0.1:5001/status"
 SEND_URL = "http://127.0.0.1:5001/send-bill"
 LOGOUT_URL = "http://127.0.0.1:5001/logout"

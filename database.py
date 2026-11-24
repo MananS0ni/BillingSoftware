@@ -11,8 +11,7 @@ import re
 import json
 from datetime import datetime
 from typing import List, Dict, Optional
-
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jewelry_shop.db")
+from app_paths import DB_PATH
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)

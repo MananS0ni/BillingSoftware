@@ -5,8 +5,7 @@ Stores Owner / Father's WhatsApp number and shop configuration in settings.json.
 
 import os
 import json
-
-SETTINGS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.json")
+from app_paths import SETTINGS_PATH
 
 DEFAULT_SETTINGS = {
     "owner_phone": "9313268100",
