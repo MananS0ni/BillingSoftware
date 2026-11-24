@@ -527,7 +527,7 @@ class KachuKhatuView(QWidget):
 
         self.date_bill.setDate(QDate.currentDate())
         try:
-            next_no = get_next_bill_number()
+            next_no = get_next_bill_number(book_no=2)
             self.txt_bill_no.setText(str(next_no))
         except Exception:
             self.txt_bill_no.setText("1")

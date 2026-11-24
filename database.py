@@ -350,10 +350,19 @@ def get_customer_ledger(customer_id: int) -> List[Dict]:
 
 # ----------------- Bill Helpers -----------------
 
-def get_next_bill_number() -> int:
+def get_next_bill_number(book_no: Optional[int] = 1) -> int:
+    """
+    Returns the next sequential bill number.
+    If book_no=1: Formal GST Tax Invoices (Create New Bill).
+    If book_no=2: Kachu Khatu (Quick Counter Ledger).
+    If book_no is None: queries across all books.
+    """
     conn = get_connection()
     c = conn.cursor()
-    c.execute("SELECT COALESCE(MAX(bill_no), 0) + 1 FROM bills;")
+    if book_no is not None:
+        c.execute("SELECT COALESCE(MAX(bill_no), 0) + 1 FROM bills WHERE book_no = ?;", (book_no,))
+    else:
+        c.execute("SELECT COALESCE(MAX(bill_no), 0) + 1 FROM bills;")
     next_no = c.fetchone()[0]
     conn.close()
     return next_no
@@ -422,7 +431,7 @@ def create_bill(customer_id: int, bill_date: str, items: List[Dict], paid_paise:
         if custom_bill_no and custom_bill_no > 0:
             bill_no = custom_bill_no
         else:
-            bill_no = get_next_bill_number()
+            bill_no = get_next_bill_number(book_no=1)
 
         c.execute("""
             INSERT INTO bills (
@@ -493,7 +502,7 @@ def create_kachu_bill(customer_id: int, bill_date: str, items: List[Dict],
         if custom_bill_no and custom_bill_no > 0:
             bill_no = custom_bill_no
         else:
-            bill_no = get_next_bill_number()
+            bill_no = get_next_bill_number(book_no=2)
 
         # Build payment breakdown description
         active_modes = []
