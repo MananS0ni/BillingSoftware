@@ -275,6 +275,7 @@ class KachuKhatuView(QWidget):
         self.table_items.setColumnCount(4)
         self.setup_table_headers()
         self.table_items.setMinimumHeight(180)
+        self.table_items.verticalHeader().setVisible(False)
         self.table_items.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.table_items.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         
@@ -590,42 +591,7 @@ class KachuKhatuView(QWidget):
         }
         self.items_data.append(item_entry)
 
-        row_idx = self.table_items.rowCount()
-        self.table_items.insertRow(row_idx)
-
-        # Sr
-        item_sr = QTableWidgetItem(str(row_idx + 1))
-        item_sr.setTextAlignment(Qt.AlignCenter)
-        self.table_items.setItem(row_idx, 0, item_sr)
-
-        # Description
-        item_d = QTableWidgetItem(desc)
-        self.table_items.setItem(row_idx, 1, item_d)
-
-        # Amount
-        item_a = QTableWidgetItem(format_inr(amt))
-        item_a.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        item_a.setStyleSheet("font-weight: bold;")
-        self.table_items.setItem(row_idx, 2, item_a)
-
-        # Delete Action Button
-        btn_del = QPushButton("❌")
-        btn_del.setCursor(Qt.PointingHandCursor)
-        btn_del.setStyleSheet("""
-            QPushButton {
-                background: #FEE2E2;
-                color: #DC2626;
-                border: 1px solid #FCA5A5;
-                border-radius: 4px;
-                font-size: 11px;
-                padding: 2px 8px;
-            }
-            QPushButton:hover {
-                background: #FCA5A5;
-            }
-        """)
-        btn_del.clicked.connect(lambda _, r=row_idx: self.remove_item(r))
-        self.table_items.setCellWidget(row_idx, 3, btn_del)
+        self.refresh_table()
 
         # Clear inputs for next item
         self.txt_item_desc.clear()
@@ -655,10 +621,14 @@ class KachuKhatuView(QWidget):
             amt = item["amount_paise"] / 100.0
             item_a = QTableWidgetItem(format_inr(amt))
             item_a.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            font = item_a.font()
+            font.setBold(True)
+            item_a.setFont(font)
             self.table_items.setItem(idx, 2, item_a)
 
             btn_del = QPushButton("❌")
             btn_del.setCursor(Qt.PointingHandCursor)
+            btn_del.setMaximumWidth(45)
             btn_del.setStyleSheet("""
                 QPushButton {
                     background: #FEE2E2;
@@ -672,8 +642,19 @@ class KachuKhatuView(QWidget):
                     background: #FCA5A5;
                 }
             """)
-            btn_del.clicked.connect(lambda _, r=idx: self.remove_item(r))
+            btn_del.clicked.connect(self._make_remove_handler(btn_del))
             self.table_items.setCellWidget(idx, 3, btn_del)
+
+    def _make_remove_handler(self, btn):
+        def _handler():
+            for r in range(self.table_items.rowCount()):
+                if self.table_items.cellWidget(r, 3) is btn:
+                    if r < len(self.items_data):
+                        self.items_data.pop(r)
+                    self.refresh_table()
+                    self.update_totals_display()
+                    break
+        return _handler
 
     def calculate_subtotal(self) -> float:
         return sum(item["amount_paise"] for item in self.items_data) / 100.0
